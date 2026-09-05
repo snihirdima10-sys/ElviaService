@@ -1,25 +1,7 @@
 from aiogram import Router
 from aiogram.filters import CommandStart
 from aiogram.types import Message
-
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-
-
-main_menu = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="🩺 Зв'язатися з лікарем")],
-        [
-            KeyboardButton(text="📝 Моя анкета"),
-            KeyboardButton(text="💉 Зробити замовлення")
-        ],
-        [
-
-            KeyboardButton(text="📊 Мій прогрес"),
-            KeyboardButton(text="📚 Корисна інформація")
-        ]
-    ],
-    resize_keyboard=True
-)
+from app.keyboards.main_menu import main_menu
 
 router = Router()
 
