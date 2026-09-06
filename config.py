@@ -5,3 +5,4 @@ load_dotenv()
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 URL_GOOGLE_FORM = os.environ["URL_GOOGLE_FORM"]
+DOCTOR_URL = os.environ["DOCTOR_URL"]
