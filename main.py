@@ -6,6 +6,7 @@ from app.handlers.start import router as start_router
 from app.handlers.questionnaire import router as questionnaire_router
 from app.handlers.contact_doctor import router as contact_doctor_router
 from app.handlers.useful_info import router as useful_info_router
+from app.handlers.progress import router as progress_router
 from config import BOT_TOKEN
 
 
@@ -17,6 +18,7 @@ async def main():
     dp.include_router(questionnaire_router)
     dp.include_router(contact_doctor_router)
     dp.include_router(useful_info_router)
+    dp.include_router(progress_router)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
