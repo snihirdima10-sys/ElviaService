@@ -245,6 +245,6 @@ async def edit_registration(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-@router.message(F.text == "⬅️ Назад")
+@router.message(F.text == "🏠 Головне меню")
 async def back_to_menu(message: Message):
     await message.answer('Головне меню:', reply_markup=main_menu)

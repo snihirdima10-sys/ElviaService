@@ -1,7 +1,7 @@
 from app.database.connect import get_connection
 import sqlite3
 
-def get_user_by_id(tg_id):
+def get_user_by_id(tg_id : int) -> dict | None:
     connection = get_connection()
     cursor = connection.cursor()
 
@@ -12,6 +12,33 @@ def get_user_by_id(tg_id):
         return None
 
     return  dict(user)
+
+
+def get_active_dose_by_user_id(tg_id: int) -> dict | None:
+
+    # f"Препарат: {}\n"
+    # f"Актуальне дозування: {}\n"
+    # f"Початок терапії: {}\n"
+    # f"Тривалість: {}\n\n"
+
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+    SELECT 
+        doses.medication, 
+        doses.dose_value, 
+        user_doses.start_date
+    FROM user_doses 
+    JOIN doses ON doses.id = user_doses.dose_id
+    WHERE tg_id = ? AND status = 'active'""", (tg_id,))
+
+    dose = cursor.fetchone()
+
+    if dose is None:
+        return None
+    return dict(dose)
+
 
 def create_user(
     tg_id,
@@ -60,20 +87,24 @@ def create_user(
 
 
 
-def get_user_dose_history(user_id):
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    cursor.execute("SELECT * FROM user_doses WHERE id = ?", (user_id,))
-    return dict(cursor.fetchone())
-
-def get_active_dose(user_id):
+def get_user_dose_history(tg_id: int) -> list | None:
     connection = get_connection()
     cursor = connection.cursor()
 
     cursor.execute("""
-    SELECT doses.dose_value, doses.medication, doses.price
+    SELECT 
+        user_doses.*,
+        doses.medication,
+        doses.dose_value
     FROM user_doses 
-    JOIN doses ON doses.id = user_doses.dose_id
-    WHERE user_id = ? AND status = 'active'""", (user_id,))
-    return dict(cursor.fetchone())
+    JOIN doses 
+        ON doses.id = user_doses.dose_id
+    WHERE tg_id = ? AND status = 'completed'
+    
+    """, (tg_id,))
+    data = cursor.fetchall()
+    if data is None:
+        return None
+
+    return [dict(item) for item in data]
+

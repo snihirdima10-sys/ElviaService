@@ -15,28 +15,31 @@ def init_db():
     current_weight REAL NOT NULL,
     target_weight REAL NOT NULL,
     next_weight_request_at DATE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at DATE NOT NULL DEFAULT CURRENT_DATE
     )""")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS doses  (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dose_value REAL NOT NULL,
     medication TEXT NOT NULL,
-    price REAL NOT NULL
+    dose_value REAL NOT NULL,
+    price REAL NOT NULL,
+    is_active INTEGER NOT NULL DEFAULT 1
     )""")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS user_doses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
+    tg_id INTEGER NOT NULL,
     dose_id INTEGER NOT NULL,
-    start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    end_date TIMESTAMP DEFAULT NULL,
+    start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    end_date DATE DEFAULT NULL,
+    start_weight REAL NOT NULL,
+    end_weight REAL DEFAULT  NULL,
     status TEXT NOT NULL,
         
-    FOREIGN KEY (user_id) 
-        REFERENCES users (id),
+    FOREIGN KEY (tg_id) 
+        REFERENCES users (tg_id),
         
     FOREIGN KEY (dose_id) 
         REFERENCES doses (id)
