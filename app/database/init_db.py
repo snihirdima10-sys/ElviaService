@@ -7,10 +7,14 @@ def init_db():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tg_id INTEGER NOT NULL UNIQUE,
     full_name TEXT NOT NULL,
+    phone TEXT NOT NULL,
     height REAL NOT NULL,
     start_weight REAL NOT NULL,
     current_weight REAL NOT NULL,
+    target_weight REAL NOT NULL,
+    next_weight_request_at DATE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )""")
 
@@ -41,4 +45,7 @@ def init_db():
 
     connection.commit()
     connection.close()
+
+if __name__ == "__main__":
+    init_db()
 
