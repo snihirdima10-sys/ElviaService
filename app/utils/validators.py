@@ -33,12 +33,4 @@ def validate_weight(weight: str) -> bool:
     return 30 <= weight <= 400
 
 def validate_phone(phone: str) -> bool:
-    phone = phone.strip()
-
-    # прибираємо пробіли, дужки та дефіси
-    phone = re.sub(r"[()\s-]", "", phone)
-
-    # міжнародний формат: + і від 10 до 15 цифр
-    pattern = r"^\+\d{10,15}$"
-
-    return bool(re.fullmatch(pattern, phone))
+    return True

@@ -40,6 +40,23 @@ def get_active_dose_by_user_id(tg_id: int) -> dict | None:
     return dict(dose)
 
 
+def get_first_therapy_date(tg_id: int):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT MIN(start_date)
+        FROM user_doses
+        WHERE tg_id = ?
+    """, (tg_id,))
+
+    first_date = cursor.fetchone()[0]
+
+    connection.close()
+
+    return first_date
+
+
 def create_user(
     tg_id,
     full_name,

@@ -23,7 +23,7 @@ async def therapy(message: Message):
 
     data = get_active_dose_by_user_id(tg_id)
 
-    if date is None:
+    if data is None:
         await message.answer("🌿 Ваша терапія\n\n"
                              "Наразі активну терапію не призначено.\n"
                              "Щоб розпочати терапію або отримати нове призначення, "
@@ -35,6 +35,7 @@ async def therapy(message: Message):
     dose_value = data["dose_value"]
     start_date = datetime.strptime(data["start_date"], "%Y-%m-%d").date()
     weeks = (date.today() - start_date).days // 7
+    weeks = format_weeks(weeks)
 
     text = (f"🌿 Ваша терапія\n\n"
             f"Препарат: {medication}\n"
