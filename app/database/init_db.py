@@ -46,6 +46,13 @@ def init_db():
         
     )""")
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS weight_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tg_id INTEGER NOT NULL,
+    weight REAL NOT NULL,
+    recorded_at DATE NOT NULL DEFAULT CURRENT_DATE
+    )""")
     connection.commit()
     connection.close()
 

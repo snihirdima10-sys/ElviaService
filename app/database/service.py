@@ -125,3 +125,23 @@ def get_user_dose_history(tg_id: int) -> list | None:
 
     return [dict(item) for item in data]
 
+def update_weight(tg_id: int, new_weight: float):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        INSERT INTO weight_history (tg_id, weight)
+        VALUES (?, ?)
+    """, (tg_id, new_weight))
+
+    cursor.execute(
+        """
+            UPDATE users
+            SET current_weight = ?
+            WHERE tg_id = ?
+        """, (new_weight, tg_id)
+    )
+
+    connection.commit()
+    connection.close()
+
