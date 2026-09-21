@@ -53,6 +53,22 @@ def init_db():
     weight REAL NOT NULL,
     recorded_at DATE NOT NULL DEFAULT CURRENT_DATE
     )""")
+
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tg_id INTEGER NOT NULL,
+    user_phone TEXT NOT NULL,
+    dose_id INTEGER NOT NULL,
+    weeks_count INTEGER NOT NULL,
+    discount INTEGER NOT NULL,
+    total_price REAL NOT NULL,
+    delivery_data TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at DATE NOT NULL DEFAULT CURRENT_DATE
+    )""")
+
     connection.commit()
     connection.close()
 

@@ -1,5 +1,14 @@
 from app.database.connect import get_connection
 import sqlite3
+from typing import TypedDict
+
+
+class ActiveDose(TypedDict):
+    medication: str
+    dose_value: float
+    start_date: str
+    price: int
+    id: int
 
 def get_user_by_id(tg_id : int) -> dict | None:
     connection = get_connection()
@@ -14,12 +23,7 @@ def get_user_by_id(tg_id : int) -> dict | None:
     return  dict(user)
 
 
-def get_active_dose_by_user_id(tg_id: int) -> dict | None:
-
-    # f"Препарат: {}\n"
-    # f"Актуальне дозування: {}\n"
-    # f"Початок терапії: {}\n"
-    # f"Тривалість: {}\n\n"
+def get_active_dose_by_user_id(tg_id: int) -> ActiveDose | None:
 
     connection = get_connection()
     cursor = connection.cursor()
@@ -28,7 +32,9 @@ def get_active_dose_by_user_id(tg_id: int) -> dict | None:
     SELECT 
         doses.medication, 
         doses.dose_value, 
-        user_doses.start_date
+        user_doses.start_date,
+        doses.price,
+        doses.id
     FROM user_doses 
     JOIN doses ON doses.id = user_doses.dose_id
     WHERE tg_id = ? AND status = 'active'""", (tg_id,))
@@ -145,3 +151,21 @@ def update_weight(tg_id: int, new_weight: float):
     connection.commit()
     connection.close()
 
+
+def add_order(tg_id, user_phone, dose_id, weeks_count, discount, total_price, delivery_data, status = "NEW"):
+    connection = get_connection()
+    cursor = connection.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO orders (
+                tg_id, user_phone, dose_id, weeks_count, discount, total_price, delivery_data, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (tg_id, user_phone, dose_id, weeks_count, discount, total_price, delivery_data, status))
+    except sqlite3.Error as error:
+        print(error)
+        connection.close()
+        return False
+
+    connection.commit()
+    connection.close()
+    return True
