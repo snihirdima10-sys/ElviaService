@@ -63,6 +63,26 @@ def get_first_therapy_date(tg_id: int):
     return first_date
 
 
+def get_user_orders(tg_id: int) -> list | None:
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            orders.*,
+            doses.medication,
+            doses.dose_value
+        FROM orders
+        JOIN doses ON doses.id = orders.dose_id
+        WHERE tg_id = ?
+        """, (tg_id,))
+
+    orders = cursor.fetchall()
+
+    cursor.close()
+    return [dict(order) for order in orders]
+
 def create_user(
     tg_id,
     full_name,

@@ -14,6 +14,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.database.init_db import init_db
 from app.handlers.update_weight import router as update_weight_router
 from app.handlers.create_order import router as order_router
+from app.handlers.my_orders import router as my_orders_router
 
 async def main():
     bot = Bot(token=BOT_TOKEN)
@@ -28,6 +29,7 @@ async def main():
     dp.include_router(progress_router)
     dp.include_router(update_weight_router)
     dp.include_router(order_router)
+    dp.include_router(my_orders_router)
 
     scheduler = AsyncIOScheduler()
 
