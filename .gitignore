@@ -3,5 +3,4 @@
 __pycache__/
 *.pyc
 .idea/
-db.db
 app/database/seed.py
