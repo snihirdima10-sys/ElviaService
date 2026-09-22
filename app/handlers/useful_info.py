@@ -1,8 +1,11 @@
 from aiogram import F
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram import Router
 from config import CHANNEL_URL
-from app.keyboards.back_menu import back_menu
+
+keyboard = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="🏠 Головне меню")]
+])
 
 router = Router()
 
@@ -15,5 +18,5 @@ async def useful_info(message: Message):
         f'та відповіді на часті запитання.\n\n'
         f'👉 <a href="{CHANNEL_URL}">Перейти до каналу</a>',
         parse_mode="HTML",
-        reply_markup=back_menu
+        reply_markup=keyboard
     )

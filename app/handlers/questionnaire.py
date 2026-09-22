@@ -1,10 +1,12 @@
 from aiogram import Router
 from aiogram.types import Message
 from  aiogram import F
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from app.keyboards.back_menu import back_menu
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from config import URL_GOOGLE_FORM
 
+keyboard = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="🏠 Головне меню")]
+])
 
 questionnaire_link_keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -23,7 +25,7 @@ router = Router()
 async def questionnaire_handler(message: Message):
     await message.answer(
         "📝 Моя анкета:",
-        reply_markup=back_menu
+        reply_markup=keyboard
     )
 
     await message.answer("""

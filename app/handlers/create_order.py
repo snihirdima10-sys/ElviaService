@@ -386,4 +386,6 @@ async def cancel(query: CallbackQuery, state: FSMContext):
     await query.answer()
     if not isinstance(query.message, Message):
         return
+
+    await query.message.edit_reply_markup(reply_markup=None)
     await query.message.answer("❌ Замовлення скасоване", reply_markup=main_keyboard)
