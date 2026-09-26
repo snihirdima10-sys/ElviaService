@@ -3,8 +3,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup,InlineKeyboardButton, Message, ReplyKeyboardRemove
 from aiogram.fsm.state import State, StatesGroup
 
-from app.keyboards.main_menu import main_menu
-from app.utils.validators import validate_weight
+from app.keyboards.main_menu_keyboard import get_main_menu_keyboard
+from app.utils.validators import *
 from app.database.service import get_user_by_id, update_weight
 
 
@@ -53,7 +53,7 @@ async def process_weight(message: Message, state: FSMContext):
     if message.text is None:
         return
 
-    if not validate_weight(message.text):
+    if not is_valid_weight(message.text):
         await message.answer(
             "⚠️ Вкажіть коректну вагу в кілограмах.\n"
             "Наприклад: 84.3"
@@ -111,13 +111,13 @@ async def confirm(query: CallbackQuery, state: FSMContext):
 
     if not isinstance(query.message, Message):
         return
-    await (query.message.edit_text(
+    await query.message.edit_text(
         "✅ Вагу успішно оновлено!\n\n"
         f"Початкова вага: {start_weight} кг\n"
         f"Актуальна вага: {current_weight} кг\n"
         f"Загальний результат: {result_weight} кг\n"
-        f"Продовжуйте рухатися до своєї мети поступово та дотримуйтеся рекомендацій лікаря 🌿", reply_markup=main_menu
-    ))
+        f"Продовжуйте рухатися до своєї мети поступово та дотримуйтеся рекомендацій лікаря 🌿",
+    )
 
     await state.clear()
     await query.answer()
