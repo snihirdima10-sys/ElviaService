@@ -1,5 +1,9 @@
 import os
 from dotenv import load_dotenv
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = BASE_DIR / "data" / "db.db"
 
 load_dotenv()
 

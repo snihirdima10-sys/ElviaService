@@ -5,9 +5,9 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Message
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
-from app.database.service import get_active_dose_by_user_id, add_order
-from app.handlers.progress import format_weeks
-from app.keyboards.main_menu import main_menu as main_keyboard
+from app.database.service import get_active_dose_by_user_id, create_order
+from app.handlers.user.progress import format_weeks
+from app.keyboards.main_menu_keyboard import get_main_menu_keyboard
 
 
 class OrderState(StatesGroup):
@@ -340,7 +340,7 @@ async def create_order(query: CallbackQuery, state: FSMContext):
         "delivery_data": f"{order_data["city"]} {order_data['location']}",
     }
 
-    success = add_order(**order_payload)
+    success = create_order(**order_payload)
     if not success:
         return
 
@@ -363,8 +363,13 @@ async def create_order(query: CallbackQuery, state: FSMContext):
         return
 
     await state.clear()
-    await query.answer(keyboard=None)
-    await query.message.answer(text, reply_markup=reply_keyboard)
+    await query.answer()
+    await query.message.edit_text(text)
+    
+    await query.message.answer(
+        "Оберіть наступну дію:",
+        reply_markup=reply_keyboard
+    )
 
 
 @router.callback_query(F.data == "main_menu")

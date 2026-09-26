@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from aiogram import Bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from app.database.connect import get_connection
+from app.database.connection import get_connection
 
 
 keyboard = InlineKeyboardMarkup(inline_keyboard=[

@@ -1,35 +1,26 @@
 import asyncio
-
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 
-from app.handlers.start import router as start_router
-from app.handlers.therapy import router as therapy_router
-from app.handlers.questionnaire import router as questionnaire_router
-from app.handlers.contact_doctor import router as contact_doctor_router
-from app.handlers.useful_info import router as useful_info_router
-from app.handlers.progress import router as progress_router
 from config import BOT_TOKEN
 from app.scheduler import request_weight
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.database.init_db import init_db
-from app.handlers.update_weight import router as update_weight_router
-from app.handlers.create_order import router as order_router
-from app.handlers.my_orders import router as my_orders_router
+
+from app.handlers.user import router as user_router
+from app.handlers.admin import router as admin_router
 
 async def main():
-    bot = Bot(token=BOT_TOKEN)
+    bot = Bot(
+        token=BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
 
+    dp.include_router(admin_router)
+    dp.include_router(user_router)
+
     init_db()
-    dp.include_router(start_router)
-    dp.include_router(therapy_router)
-    dp.include_router(questionnaire_router)
-    dp.include_router(contact_doctor_router)
-    dp.include_router(useful_info_router)
-    dp.include_router(progress_router)
-    dp.include_router(update_weight_router)
-    dp.include_router(order_router)
-    dp.include_router(my_orders_router)
 
     scheduler = AsyncIOScheduler()
 
@@ -43,6 +34,7 @@ async def main():
 
     scheduler.start()
 
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
