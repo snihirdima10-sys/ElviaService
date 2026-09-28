@@ -35,4 +35,6 @@ class DoseRepository:
         finally:
             connection.close()
 
+dose_repository = DoseRepository()
+
 

@@ -2,8 +2,10 @@ from aiogram import Router
 
 from app.handlers.user.start import router as start_router
 from app.handlers.user.registration import router as registration_router
+
 from app.handlers.user.therapy import router as therapy_router
-from app.handlers.user.questionnaire import router as questionnaire_router
+from app.handlers.user.therapy_history import router as therapy_history_router
+
 from app.handlers.user.progress import router as progress_router
 from app.handlers.user.update_weight import router as update_weight_router
 from app.handlers.user.create_order import router as create_order_router
@@ -16,8 +18,10 @@ router = Router()
 
 router.include_router(start_router)
 router.include_router(registration_router)
+
 router.include_router(therapy_router)
-router.include_router(questionnaire_router)
+router.include_router(therapy_history_router)
+
 router.include_router(progress_router)
 router.include_router(update_weight_router)
 router.include_router(create_order_router)

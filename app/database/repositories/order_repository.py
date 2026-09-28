@@ -27,7 +27,7 @@ class OrderRepository:
                total_price: float,
                delivery_data: str,
                status: str
-    ) -> bool:
+    ) -> int:
         pass
 
     def get_by_id(self, order_id: int) -> dict | None:
@@ -69,8 +69,15 @@ class OrderRepository:
                     orders.*,
                     doses.medication,
                     doses.dose_value
+                    
                 FROM orders
-                JOIN doses ON doses.id = orders.dose_id
+                
+                JOIN users
+                    ON orders.user_id = users.id
+                    
+                JOIN doses
+                    ON doses.id = orders.dose_id
+                    
                 WHERE tg_id = ?
                 """, (tg_id,)
             )
@@ -142,10 +149,31 @@ class OrderRepository:
         cursor = connection.cursor()
         try:
             cursor.execute("""
-                       INSERT INTO orders (
-                           tg_id, user_phone, dose_id, weeks_count, discount, total_price, delivery_data, status
-                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                   """, (tg_id, user_phone, dose_id, weeks_count, discount, total_price, delivery_data, status))
+                INSERT INTO orders (
+                    user_id,
+                    user_phone,
+                    dose_id,
+                    weeks_count,
+                    discount,
+                    total_price,
+                    delivery_data,
+                    status
+                )
+                SELECT
+                    users.id,
+                    ?, ?, ?, ?, ?, ?, ?
+                FROM users
+                WHERE users.tg_id = ?
+            """, (
+                user_phone,
+                dose_id,
+                weeks_count,
+                discount,
+                total_price,
+                delivery_data,
+                status,
+                tg_id
+            ))
 
             order_id = cursor.lastrowid
             connection.commit()
@@ -160,6 +188,6 @@ class OrderRepository:
             connection.close()
 
 
-
+order_repository = OrderRepository()
 
 

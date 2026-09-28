@@ -5,6 +5,7 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKey
     InlineKeyboardButton, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
+from app.keyboards.inline_link_keyboard import get_inline_link_keyboard
 from app.keyboards.main_menu_keyboard import get_main_menu_keyboard
 from app.utils.validators import * # тимчасовий імпорт всіх функцій, обовїязково оптимізувати
 from app.states.user.registration import RegistrationStates
@@ -45,6 +46,7 @@ def get_confirm_registration_keyboard():
         ]
     )
     return keyboard
+
 
 async def show_registration_confirmation(message: Message, state: FSMContext):
     data = await state.get_data()
@@ -190,7 +192,7 @@ async def process_phone(message: Message, state: FSMContext):
     await state.update_data(phone=phone)
 
     await message.answer(
-        "✅ Номер телефону отримано.",
+        "✅ Номер телефону отримано",
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -225,7 +227,7 @@ async def process_registration_confirmation(query: CallbackQuery, state: FSMCont
         target_weight,
         next_weight_request_at
     )
-    print(user_id)
+
     if not user_id:
         await query.message.answer(
 
@@ -234,9 +236,27 @@ async def process_registration_confirmation(query: CallbackQuery, state: FSMCont
         return
 
     await state.clear()
-    await query.message.edit_reply_markup(reply_markup=None)
-    await query.message.answer("✅ Реєстрацію успішно завершено.", reply_markup=get_main_menu_keyboard())
 
+    text = (
+        "🌿 <b>Заповнення медичної анкети</b>\n\n"
+        "Перед початком співпраці з Elvia пропонуємо вам заповнити невелику анкету. "
+        "Вона допоможе спеціалісту краще познайомитися з вами, дізнатися про стан вашого здоров’я, "
+        "спосіб життя, попередній досвід і очікування від терапії.\n\n"
+        "Будь ласка, відповідайте уважно та відверто — це допоможе зробити майбутню консультацію "
+        "безпечною та максимально корисною саме для вас.\n\n"
+        "Заповнення анкети триватиме приблизно 10–15 хвилин. Уся надана інформація залишається конфіденційною "
+        "та використовується лише для проведення консультації й персонального супроводу.\n\n"
+        "Після отримання анкети спеціаліст ознайомиться з вашими відповідями та зв’яжеться з вами, "
+        "щоб разом узгодити наступний крок ☺️"
+    )
+
+    await query.message.edit_text("✅ Реєстрацію успішно завершено")
+    await query.message.answer(text, reply_markup=get_inline_link_keyboard())
+    await query.message.answer(
+        "🌿 <b>Зовсім скоро вам стане доступне головне меню</b>\n"
+        "Після консультації з лікарем і призначення індивідуальної терапії "
+        "ви зможете користуватися всіма можливостями бота 💚"
+        , reply_markup=get_main_menu_keyboard())
 
 @router.callback_query(RegistrationStates.confirm_registration, F.data == "edit_registration")
 async def edit_registration(callback: CallbackQuery, state: FSMContext):

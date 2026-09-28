@@ -1,11 +1,16 @@
 from datetime import date, datetime
 
 from aiogram import F
+from aiogram.filters import StateFilter
 from aiogram.types import Message, BufferedInputFile
 from aiogram import Router
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
-from app.database.service import get_user_by_id, get_first_therapy_date
+
+from app.database.repositories.therapy_repository import therapy_repository
+from app.database.repositories.user_repository import user_repository
+from app.keyboards.main_menu_keyboard import get_main_menu_keyboard
+from app.utils.formatter import format_weeks
 
 
 def calculate_bmi(weight: float, height: float) -> float:
@@ -13,46 +18,46 @@ def calculate_bmi(weight: float, height: float) -> float:
     return round(weight / (height_m ** 2), 1)
 
 
-def format_weeks(weeks: int) -> str:
-    if weeks % 10 == 1 and weeks % 100 != 11:
-        word = "тиждень"
-    elif weeks % 10 in [2, 3, 4] and weeks % 100 not in [12, 13, 14]:
-        word = "тижні"
-    else:
-        word = "тижнів"
-
-    return f"{weeks} {word}"
+# Координати для шаблону 1198x1313
+RESULT_POS = (1080 // 2, 514 + 100)
+START_WEIGHT_POS = (160 + 108, 800 + 100)
+CURRENT_WEIGHT_POS = (485 + 108, 800 + 100)
+GOAL_WEIGHT_POS = (810 + 120, 800 + 100)
+BMI_POS = (175 + 183, 980 + 100)
+THERAPY_WEEKS_POS = (660 + 183, 980 + 100)
 
 
 router = Router()
 
 
-@router.message(F.text == "📊 Мій прогрес")
+@router.message(StateFilter(None), F.text == "📊 Мій прогрес")
 async def progress(message: Message):
     if message.from_user is None:
         return
 
-    tg_id = int(message.from_user.id)
-
-    start_date = get_first_therapy_date(tg_id)
+    tg_id = message.from_user.id
+    therapy = therapy_repository.get_first_by_tg_id(tg_id)
+    start_date = therapy["created_at"]
 
     if start_date is None:
-        await message.answer("📊 Мій прогрес\n\n"
-                             "Прогрес поки що не відображається.\n"
-                             "Для початку відстеження необхідне щонайменше "
-                             "одне призначення терапії від лікаря.")
+        await message.answer(
+            "📊 Мій прогрес\n\n"
+            "Прогрес поки що не відображається.\n"
+            "Для початку відстеження необхідне щонайменше "
+            "одне призначення терапії від лікаря."
+        )
         return
 
-    data = get_user_by_id(tg_id)
-    if data is None:
+    user = user_repository.get_by_tg_id(tg_id)
+    if user is None:
         return
 
-    start_weight = data["start_weight"]
-    current_weight = data["current_weight"]
-    target_weight = data["target_weight"]
-    height = data["height"]
+    start_weight = user["start_weight"]
+    current_weight = user["current_weight"]
+    target_weight = user["target_weight"]
+    height = user["height"]
 
-    start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+    start_date = datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S").date()
     result = round(float(current_weight) - float(start_weight), 1)
 
     start_bmi = calculate_bmi(start_weight, height)
@@ -70,25 +75,12 @@ async def progress(message: Message):
     font_result = ImageFont.truetype("app/assets/fonts/BalsamiqSans-Bold.ttf", 80)
     font_medium = ImageFont.truetype("app/assets/fonts/BalsamiqSans-Regular.ttf", 42)
 
-    width = 1080
-    height = 1350
-
-    # Координати для шаблону 1198x1313
-    RESULT_POS = (width // 2, 514 + 50)
-    START_WEIGHT_POS = (160 + 105, 800 + 50)
-    CURRENT_WEIGHT_POS = (485 + 105, 800 + 50)
-    GOAL_WEIGHT_POS = (810 + 105, 800 + 50)
-    BMI_POS = (175 + 180, 980 + 50)
-    THERAPY_WEEKS_POS = (660 + 180, 980 + 50)
-
-
-
     # Додаємо дані на картинку
     draw.text(
         RESULT_POS,
         f"{result:.1f} кг",
         font=font_result,
-        fill=(70, 90, 60),
+        fill=(243, 201, 107),
         anchor="mm"
     )
 
@@ -96,7 +88,7 @@ async def progress(message: Message):
         START_WEIGHT_POS,
         f"{start_weight:.1f} кг",
         font=font_medium,
-        fill=(75, 55, 45),
+        fill=(243, 201, 107),
         anchor="mm"
     )
 
@@ -104,7 +96,7 @@ async def progress(message: Message):
         CURRENT_WEIGHT_POS,
         f"{current_weight:.1f} кг",
         font=font_medium,
-        fill=(75, 55, 45),
+        fill=(243, 201, 107),
         anchor="mm"
     )
 
@@ -112,7 +104,7 @@ async def progress(message: Message):
         GOAL_WEIGHT_POS,
         f"{target_weight:.1f} кг",
         font=font_medium,
-        fill=(75, 55, 45),
+        fill=(243, 201, 107),
         anchor="mm"
     )
 
@@ -120,7 +112,7 @@ async def progress(message: Message):
         BMI_POS,
         f"{start_bmi:.1f} → {current_bmi:.1f}",
         font=font_medium,
-        fill=(75, 55, 45),
+        fill=(243, 201, 107),
         anchor="mm"
     )
 
@@ -128,7 +120,7 @@ async def progress(message: Message):
         THERAPY_WEEKS_POS,
         f"{weeks}",
         font=font_medium,
-        fill=(75, 55, 45),
+        fill=(243, 201, 107),
         anchor="mm"
     )
 
@@ -153,5 +145,6 @@ async def progress(message: Message):
     # Відправляємо картинку користувачу
     await message.answer_photo(
         photo=photo,
-        caption="📊 Ваш актуальний прогрес"
+        caption="📊 Ваш актуальний прогрес",
+        reply_markup=get_main_menu_keyboard()
     )

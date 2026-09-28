@@ -1,5 +1,6 @@
 from aiogram import Router
 from aiogram import F
+from aiogram.filters import StateFilter
 from aiogram.types  import Message, KeyboardButton, ReplyKeyboardMarkup
 from config import DOCTOR_URL
 
@@ -12,7 +13,7 @@ keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-@router.message(F.text == "👩‍⚕️ Зв’язатися з лікарем")
+@router.message(StateFilter(None), F.text == "👩‍⚕️ Зв’язатися з лікарем")
 async def contact_doctor(message: Message):
     await message.answer(
         f'🩺 <b>Зв’язатися з лікарем</b>\n\n'
