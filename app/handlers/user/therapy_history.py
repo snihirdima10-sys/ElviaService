@@ -59,13 +59,12 @@ async def therapy_history(message: Message):
     result_weight = round(start_weight - current_weight,1)
 
     active_dose_text = (
-        "🟢 <b>Поточний етап</b>\n\n"
+        "✅ <b>Поточний етап</b>\n\n"
         f"<b>{medication} • {dose_value} мг</b>\n\n"
         f"Початок: {start_date.strftime("%d.%m.%Y")}\n"
         f"Тривалість: {format_weeks(weeks)}\n"
-        f"Вага: {start_weight} → {current_weight} кг\n"
-        f"Результат: <b>{result_weight} кг</b>\n"
-        f"─────────────────────\n\n"
+        f"Актуальна вага: {user["current_weight"]} кг\n\n"
+        f"──────────────\n\n"
         f"🌿 <b>Завершені етапи</b>\n\n"
 
     )
@@ -89,23 +88,22 @@ async def therapy_history(message: Message):
             f"Тривалість: {format_weeks(weeks)}\n"
             f"Вага: {start_weight} → {end_weight} кг\n"
             f"Результат: <b>{result_weight} кг</b>\n"
-            f"──────────────────\n"
+            f"──────────────\n"
         )
 
     overall_result = (
-        "📊 <b>Загальний результат терапії</b>\n\n"
+        "\n📊 <b>Загальний результат терапії</b>\n\n"
         f"Початкова вага: {start_weight} кг\n"
         f"Актуальна вага: {current_weight} кг\n"
         f"Зміна ваги: <b>{result_weight} кг</b>\n"
         f"Тривалість терапії: {format_weeks(weeks)}\n\n"
-        "⚠️ Зміна дозування можлива лише після погодження з лікарем"
+        "♻️️ <i>Зміна дозування можлива лише після погодження з лікарем</i>"
     )
 
 
     await message.answer(
-        "💉 Історія терапії\n\n"
-        "Тут зберігається історія змін вашого дозування "
-        "та результат за кожний період терапії\n\n"
+        "👤 <b>Історія терапії</b>\n\n"
+        "Тут зберігаються всі етапи терапії, зміни дозування та динаміка ваги\n\n"
         + active_dose_text + history_therapy_text + overall_result
         , reply_markup=get_therapy_history_keyboard()
     )

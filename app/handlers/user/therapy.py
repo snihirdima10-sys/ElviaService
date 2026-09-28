@@ -40,13 +40,12 @@ async def therapy(message: Message):
     start_date = datetime.strptime(active_therapy["start_date"], "%Y-%m-%d").date()
     weeks = (date.today() - start_date).days // 7
 
-    text = (
-        f"🌿 <b>Ваша терапія</b>\n\n"
-        f"<b>Препарат:</b> {medication}\n"
-        f"<b>Актуальне дозування:</b> {dose_value}\n"
-        f"<b>Початок терапії:</b> {start_date}\n"
-        f"<b>Тривалість:</b> {format_weeks(weeks)}\n\n"
-        f"⚠️ Будь-які зміни погоджуйте з лікарем"
+    text = ("🌿 <b>Ваша терапія</b>\n\n"
+            f"Препарат: <b>{medication}</b>\n"
+            f"Поточне дозування: <b>{dose_value} мг</b>\n"
+            f"Початок терапії: <b>{start_date.strftime("%d.%m.%Y")}</b>\n"
+            f"Тривалість терапії: <b>{format_weeks(weeks)}</b>\n\n"
+            f"♻️ <i>Будь-які зміни погоджуйте з лікарем</i>"
     )
 
     await message.answer(text, reply_markup=get_therapy_keyboard())

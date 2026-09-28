@@ -17,7 +17,7 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
             ],
             [
                 KeyboardButton(text="📋 Історія терапії"),
-                KeyboardButton(text="📦 МоЇ замовлення")
+                KeyboardButton(text="📦 Мої замовлення")
             ],
             [KeyboardButton(text="👩‍⚕️ Зв’язатися з лікарем")]
         ], resize_keyboard=True

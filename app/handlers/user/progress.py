@@ -19,12 +19,12 @@ def calculate_bmi(weight: float, height: float) -> float:
 
 
 # Координати для шаблону 1198x1313
-RESULT_POS = (1080 // 2, 514 + 100)
+RESULT_POS = (1080 // 2 + 20, 514 + 100)
 START_WEIGHT_POS = (160 + 108, 800 + 100)
-CURRENT_WEIGHT_POS = (485 + 108, 800 + 100)
-GOAL_WEIGHT_POS = (810 + 120, 800 + 100)
+CURRENT_WEIGHT_POS = (485 + 108 + 20, 800 + 100)
+GOAL_WEIGHT_POS = (810 + 120 + 20, 800 + 100)
 BMI_POS = (175 + 183, 980 + 100)
-THERAPY_WEEKS_POS = (660 + 183, 980 + 100)
+THERAPY_WEEKS_POS = (660 + 183+10, 980 + 100)
 
 
 router = Router()
