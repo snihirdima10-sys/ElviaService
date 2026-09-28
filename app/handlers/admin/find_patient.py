@@ -1,5 +1,3 @@
-from asyncio.windows_events import NULL
-
 from aiogram import F, Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardMarkup, KeyboardButton, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -43,7 +41,7 @@ async def show_patient(message: Message, state: FSMContext):
 
     if data.get("message_id"):
         await message.edit_text(text, reply_markup=inline_keyboard)
-        await state.update_data(message_id=NULL)
+        await state.update_data(message_id=None)
     else:
 
         await message.answer(text, reply_markup=inline_keyboard)
