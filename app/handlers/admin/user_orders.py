@@ -4,9 +4,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.database.service import get_orders_by_status, get_order
-from app.handlers.user.progress import format_weeks
 from app.states.admin.AdminState import AdminState
+from utils.formatter import format_weeks
+
 
 def get_order_status_keyboard(order: dict) -> InlineKeyboardMarkup:
     buttons = []

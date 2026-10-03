@@ -1,13 +1,13 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
-from app.database.repositories.user_repository import user_repository
 from app.keyboards.main_menu_keyboard import get_main_menu_keyboard
 from app.keyboards.privacy_policy_keyboard import get_privacy_policy_keyboard
 from app.keyboards.welcome_keyboard import get_welcome_keyboard
 from app.texts.privacy_policy import PRIVACY_POLICY_TEXT
-
+from container import Services
 
 WELCOME_TEXT = (
     "🌿 <b>Вітаємо в Elvia</b>\n\n"
@@ -22,18 +22,22 @@ router = Router()
 
 
 @router.message(CommandStart())
-async def start_handler(message: Message):
+async def start_handler(message: Message, state: FSMContext, services: Services):
+    await state.clear()
     if message.from_user is None:
         return
-    user = user_repository.get_by_tg_id(message.from_user.id)
+    tg_id = message.from_user.id
 
-    if user is None:
+    user_id = services.user.get_user_id_by_tg_id(tg_id)
+
+    if user_id is None:
         await message.answer(WELCOME_TEXT, reply_markup=get_welcome_keyboard())
         return
 
-    await message.answer("🌿 <b>Вітаємо в Elvia</b>\n\n"
-                        "Ваш персональний простір турботи, контролю та впевненого руху до бажаного результату 🤍"
-                         , reply_markup=get_main_menu_keyboard())
+    await message.answer(
+        "🌿 <b>Вітаємо в Elvia</b>\n\n"
+            "Ваш персональний простір турботи, контролю та впевненого руху до бажаного результату 🤍"
+            , reply_markup=get_main_menu_keyboard())
 
 
 @router.callback_query(F.data == "privacy_policy")
@@ -50,3 +54,11 @@ async def back_to_welcome_message(callback: CallbackQuery):
     if not isinstance(callback.message, Message):
         return
     await callback.message.edit_text(WELCOME_TEXT, reply_markup=get_welcome_keyboard())
+
+
+@router.message(F.data == "🏠 Головне меню")
+async def go_to_main_menu(message: Message, state: FSMContext, services: Services):
+    await state.clear()
+    if message.from_user is None:
+        return
+    await message.answer("Головне меню:", reply_markup=get_main_menu_keyboard())

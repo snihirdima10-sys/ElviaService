@@ -1,51 +1,30 @@
 from aiogram import Router, F
 from aiogram.filters import StateFilter
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
-from datetime import datetime, date
-from app.database.repositories.therapy_repository import therapy_repository
-from app.utils.formatter import format_weeks
+from aiogram.types import Message
+from container import Services
+from keyboards.user import get_therapy_keyboard
+from texts.user import format_therapy
 
 
 router = Router()
 
 
-def get_therapy_keyboard() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="📋 Історія терапії")],
-            [KeyboardButton(text="🏠 Головне меню")],
-        ], resize_keyboard=True
-    )
-
-
 @router.message(StateFilter(None), F.text == "🌿 Моя терапія")
-async def therapy(message: Message):
+async def show_therapy(message: Message, services :Services):
     if message.from_user is None:
         return
     tg_id = message.from_user.id
-    active_therapy = therapy_repository.get_active_by_tg_id(tg_id)
 
-    if active_therapy is None:
-        await message.answer(
-            "🌿 <b>Ваша терапія</b>\n\n"
-            "Наразі активну терапію не призначено.\n"
-            "Щоб розпочати терапію або отримати нове призначення, "
-            "зверніться до лікаря.\n\n"
-            "⚠Не починайте прийом препаратів і не змінюйте дозування самостійно."
-        )
+    user_id = services.user.get_user_id_by_tg_id(tg_id)
+    if user_id is None:
         return
 
-    medication = active_therapy["medication"]
-    dose_value = active_therapy["dose_value"]
-    start_date = datetime.strptime(active_therapy["start_date"], "%Y-%m-%d").date()
-    weeks = (date.today() - start_date).days // 7
+    active_therapy = services.therapy.get_active_therapy_by_user_id(user_id)
+    planned_therapy = services.therapy.get_planned_therapy_by_user_id(user_id)
 
-    text = ("🌿 <b>Ваша терапія</b>\n\n"
-            f"Препарат: <b>{medication}</b>\n"
-            f"Поточне дозування: <b>{dose_value} мг</b>\n"
-            f"Початок терапії: <b>{start_date.strftime("%d.%m.%Y")}</b>\n"
-            f"Тривалість терапії: <b>{format_weeks(weeks)}</b>\n\n"
-            f"♻️ <i>Будь-які зміни погоджуйте з лікарем</i>"
+    text = format_therapy(
+        active_therapy = active_therapy,
+        planned_therapy = planned_therapy
     )
 
     await message.answer(text, reply_markup=get_therapy_keyboard())

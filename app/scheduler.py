@@ -3,6 +3,9 @@ from aiogram import Bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from app.database.connection import get_connection
 
+from app.services.therapy_service import TherapyService
+from app.database.repositories.therapy_repository import therapy_repository
+
 
 keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="⚖️ Оновити вагу", callback_data="update_weight")],
@@ -46,3 +49,28 @@ async def request_weight(bot: Bot):
 
     connection.commit()
     connection.close()
+
+
+async def is_active(therapy_service: TherapyService):
+    print("!!!!")
+    today = date.today().strftime("%Y-%m-%d")
+
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    planned_therapies = cursor.execute("""
+    SELECT *
+    FROM user_doses
+    WHERE status == "planned" AND start_date <= ?
+    """, (today,)).fetchall()
+
+    for therapy in planned_therapies:
+        user_id = therapy["user_id"]
+        user = therapy_service.user.get_by_id(user_id)
+
+        active_therapy = therapy_service.get_active_therapy_by_user_id(user_id)
+
+        if active_therapy:
+            therapy_service.therapy.set_status_by_therapy_id(active_therapy["id"], "completed", user["current_weight"], today)
+
+        therapy_service.therapy.set_status_by_therapy_id(therapy["id"], "active",)

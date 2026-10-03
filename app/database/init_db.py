@@ -49,7 +49,7 @@ def init_db() -> None:
             );
 
 
-            CREATE TABLE IF NOT EXISTS user_doses (
+            CREATE TABLE IF NOT EXISTS therapies (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
 
                 user_id INTEGER NOT NULL,
@@ -79,6 +79,10 @@ def init_db() -> None:
                     REFERENCES doses(id)
                     ON DELETE RESTRICT
             );
+            
+            CREATE UNIQUE INDEX IF NOT EXISTS one_planned_per_user
+            ON therapies(user_id)
+            WHERE status = 'planned';
 
 
             CREATE TABLE IF NOT EXISTS weight_history (
@@ -101,7 +105,6 @@ def init_db() -> None:
                 user_id INTEGER NOT NULL,
                 dose_id INTEGER NOT NULL,
 
-                user_phone TEXT NOT NULL,
 
                 weeks_count INTEGER NOT NULL CHECK(weeks_count > 0),
 
@@ -120,7 +123,6 @@ def init_db() -> None:
                     )),
 
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME,
 
                 FOREIGN KEY (user_id)
                     REFERENCES users(id)
@@ -132,12 +134,12 @@ def init_db() -> None:
             );
 
 
-            CREATE INDEX IF NOT EXISTS idx_user_doses_user_id
-                ON user_doses(user_id);
+            CREATE INDEX IF NOT EXISTS idx_therapies_user_id
+                ON therapies(user_id);
 
 
-            CREATE INDEX IF NOT EXISTS idx_user_doses_status
-                ON user_doses(status);
+            CREATE INDEX IF NOT EXISTS idx_therapies_status
+                ON therapies(status);
 
 
             CREATE INDEX IF NOT EXISTS idx_weight_history_user_id

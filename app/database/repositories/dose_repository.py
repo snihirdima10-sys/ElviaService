@@ -1,23 +1,27 @@
+import sqlite3
+
 from app.database.connection import  get_connection
+from models.dose import Dose
+
 
 # noinspection PyMethodMayBeStatic
 # noinspection PyRedeclaration
 class DoseRepository:
-    def get_by_id(self, dose_id: int) -> dict:
-        pass
-
-    def get_all(self) -> list:
-        pass
-
-    def get_by_id(self, dose_id: int) -> dict | None:
+    def get_by_id(self, dose_id: int) -> Dose | None:
         connection = get_connection()
         cursor = connection.cursor()
 
         try:
-            cursor.execute("""SELECT * FROM doses WHERE id = ?""", (dose_id,))
+            cursor.execute("""
+            SELECT 
+                id,
+                medication,
+                dose_value,
+                price
+            FROM doses 
+            WHERE id = ?""", (dose_id,))
             dose = cursor.fetchone()
-            connection.close()
-            return dict(dose) if dose is not None else None
+            return self._map_to_dose(dose) if dose else None
 
         finally:
             connection.close()
@@ -34,6 +38,14 @@ class DoseRepository:
 
         finally:
             connection.close()
+
+    def _map_to_dose(self, row: sqlite3.Row) -> Dose:
+        return Dose(
+            id=row["id"],
+            medication=row["medication"],
+            dose_value=row["dose_value"],
+            price=row["price"],
+        )
 
 dose_repository = DoseRepository()
 

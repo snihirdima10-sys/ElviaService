@@ -6,7 +6,7 @@ from app.database.connection import get_connection
 
 # noinspection PyMethodMayBeStatic
 class WeightRepository:
-    def update_by_tg_id(self, tg_id: int, new_weight: float) -> int:
+    def add_weight_by_user_id(self, user_id: int, new_weight: float) -> int:
         connection = get_connection()
         cursor = connection.cursor()
 
@@ -15,8 +15,8 @@ class WeightRepository:
                 INSERT INTO weight_history (user_id, weight)
                 SELECT users.id, ?
                 FROM users
-                WHERE users.tg_id = ?
-                """, (new_weight, tg_id)
+                WHERE users.id = ?
+                """, (new_weight, user_id)
             )
 
             connection.commit()

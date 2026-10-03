@@ -1,16 +1,51 @@
 import sqlite3
+from datetime import datetime
 
 from app.database.connection import get_connection
+from models.dose import Dose
+from models.order import Order, OrderStatus
 
 
 # noinspection PyRedeclaration
 # noinspection PyMethodMayBeStatic
 class OrderRepository:
-    def get_by_id(self, order_id: int) -> dict | None:
-        pass
+    def get_all_by_user_id(self, user_id: int) -> list[Order]:
+        """Повертраэ список замовлень користувача"""
 
-    def get_all_by_tg_id(self, tg_id: int) -> list| None:
-        pass
+        connection = get_connection()
+        cursor = connection.cursor()
+
+        try:
+            cursor.execute("""
+                SELECT 
+                    orders.id,
+                    orders.user_id,
+                    orders.dose_id,
+                    orders.weeks_count,
+                    orders.discount,
+                    orders.total_price,
+                    orders.delivery_data,
+                    orders.status,
+                    orders.created_at,
+                    
+                    doses.id AS dose_id,
+                    doses.medication,
+                    doses.dose_value,
+                    doses.price
+                FROM orders
+                JOIN doses
+                    ON doses.id = orders.dose_id
+                WHERE user_id = ?        
+            """, (user_id,))
+
+            rows = cursor.fetchall()
+            if rows is None:
+                return []
+            return [self._map_to_order(row) for row in rows]
+
+        finally:
+            connection.close()
+
 
     def get_all_by_status(self, status: str) -> list| None:
         pass
@@ -19,7 +54,7 @@ class OrderRepository:
         pass
 
     def create(self,
-               tg_id: int,
+               user_id: int,
                user_phone: str,
                dose_id: int,
                weeks_count: int,
@@ -136,8 +171,7 @@ class OrderRepository:
 
 
     def create(self,
-               tg_id: int,
-               user_phone: str,
+               user_id: int,
                dose_id: int,
                weeks_count: int,
                discount: int,
@@ -151,7 +185,6 @@ class OrderRepository:
             cursor.execute("""
                 INSERT INTO orders (
                     user_id,
-                    user_phone,
                     dose_id,
                     weeks_count,
                     discount,
@@ -159,20 +192,16 @@ class OrderRepository:
                     delivery_data,
                     status
                 )
-                SELECT
-                    users.id,
-                    ?, ?, ?, ?, ?, ?, ?
-                FROM users
-                WHERE users.tg_id = ?
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (
-                user_phone,
+                user_id,
                 dose_id,
                 weeks_count,
                 discount,
                 total_price,
                 delivery_data,
                 status,
-                tg_id
+
             ))
 
             order_id = cursor.lastrowid
@@ -186,6 +215,24 @@ class OrderRepository:
 
         finally:
             connection.close()
+
+    def _map_to_order(self, row: sqlite3.Row) -> Order:
+        return Order(
+            id=row['id'],
+            user_id=row['user_id'],
+            dose=Dose(
+                id=row['dose_id'],
+                medication=row['medication'],
+                dose_value=row['dose_value'],
+                price=row['price']
+            ),
+            weeks_count=row['weeks_count'],
+            discount=row['discount'],
+            total_price=row['total_price'],
+            delivery_data=row['delivery_data'],
+            status=OrderStatus(row['status']),
+            created_at=datetime.fromisoformat(row['created_at']).date(),
+        )
 
 
 order_repository = OrderRepository()

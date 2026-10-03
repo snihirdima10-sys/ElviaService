@@ -4,8 +4,11 @@ from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.types import Message,  ReplyKeyboardMarkup, KeyboardButton
 
-from app.database.repositories.order_repository import order_repository
 from app.utils.formatter import format_weeks
+from container import Services
+from keyboards.main_menu_keyboard import get_main_menu_keyboard
+from models.order import Order
+from texts.user import format_orders_text
 
 
 def get_my_orders_keyboard() -> ReplyKeyboardMarkup:
@@ -17,37 +20,22 @@ def get_my_orders_keyboard() -> ReplyKeyboardMarkup:
 router = Router()
 
 @router.message(StateFilter(None), F.text == "📦 Мої замовлення")
-async def show_user_orders(message: Message):
+async def show_user_orders(message: Message, services: Services):
     if message.from_user is None:
         return
-
     tg_id = message.from_user.id
-    orders = order_repository.get_all_by_tg_id(tg_id)
+    user_id = services.user.get_user_id_by_tg_id(tg_id)
+    if user_id is None:
+        return
 
-    if orders is None:
+    orders = services.order.get_all_orders_by_user_id(user_id)
+
+    if not orders:
         await message.answer(
             "📦 Замовлень поки немає\n\n"
             "У вас ще немає оформлених замовлень.\n\n"
             "Коли ви зробите перше замовлення, інформація про нього з’явиться в цьому розділі 🤍"
+        , reply_markup=get_main_menu_keyboard()
         )
         return
-
-
-    orders_text = ""
-
-    i = 1
-    for order in orders:
-        date = datetime.strptime(order["created_at"], "%Y-%m-%d %H:%M:%S").date()
-        date = date.strftime("%d.%m.%Y")
-        orders_text += (
-            f"🪴<b>Замовлення №{order["id"]}</b>\n\n"
-            f"{order["medication"]} - {order["dose_value"]} мг\n"
-            f"Курс: {format_weeks(order["weeks_count"])}\n"
-            f"Сума: {order["total_price"]:.0f} грн\n"
-            f"Дата: {date}\n\n")
-
-        if i < len(orders):
-            i += 1
-            orders_text += "────────────────────────\n\n"
-
-    await message.answer("📦 <b>Історія замовлень</b>\n\n" + orders_text, reply_markup=get_my_orders_keyboard())
+    await message.answer(format_orders_text(orders=orders), reply_markup=get_my_orders_keyboard())

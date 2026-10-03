@@ -4,9 +4,12 @@ class AdminState(StatesGroup):
     show_admin_panel = State()
 
     wait_patient_data = State()
+    wait_for_select_patient = State()
     show_patient = State()
 
     change_dose = State()
+    select_date = State()
+    wait_write_date = State()
     wait_confirm_dose_change = State()
     confirmed_dose = State()
 
