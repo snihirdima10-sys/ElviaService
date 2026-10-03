@@ -5,7 +5,7 @@ from aiogram import Router
 
 from app.keyboards.main_menu_keyboard import get_main_menu_keyboard
 
-from container import Services
+from app.container import Services
 from utils.generate_progress_photo import generate_progress_photo
 
 

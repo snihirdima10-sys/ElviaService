@@ -9,7 +9,7 @@ from app.services.therapy_service import TherapyService
 from app.services.user_service import UserService
 from app.states.admin.AdminState import AdminState
 from app.texts.admin import format_user_card
-from container import Services
+from app.container import Services
 
 router = Router()
 

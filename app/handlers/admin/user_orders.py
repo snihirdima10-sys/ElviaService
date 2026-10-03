@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from app.states.admin.AdminState import AdminState
-from container import Services
+from app.container import Services
 from utils.formatter import format_weeks
 
 router = Router()

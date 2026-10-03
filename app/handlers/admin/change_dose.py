@@ -10,7 +10,7 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, C
 from app.handlers.admin.user_card import show_user_card
 from app.keyboards.admin_keyboards import build_doses_keyboard, get_confirm_change_dose_keyboard
 from app.states.admin.AdminState import AdminState
-from container import Services
+from app.container import Services
 
 router = Router()
 

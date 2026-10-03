@@ -1,7 +1,7 @@
 from aiogram import Router, F
 from aiogram.filters import StateFilter
 from aiogram.types import Message
-from container import Services
+from app.container import Services
 from keyboards.user import get_therapy_keyboard
 from texts.user import format_therapy
 

@@ -2,7 +2,7 @@ from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.types import Message
 
-from container import Services
+from app.container import Services
 from keyboards.user import get_therapy_history_keyboard
 from texts.user import format_therapy_history
 

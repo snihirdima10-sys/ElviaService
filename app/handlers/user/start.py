@@ -7,7 +7,7 @@ from app.keyboards.main_menu_keyboard import get_main_menu_keyboard
 from app.keyboards.privacy_policy_keyboard import get_privacy_policy_keyboard
 from app.keyboards.welcome_keyboard import get_welcome_keyboard
 from app.texts.privacy_policy import PRIVACY_POLICY_TEXT
-from container import Services
+from app.container import Services
 from app.handlers.user.progress import progress
 
 WELCOME_TEXT = (

@@ -19,7 +19,7 @@ from app.database.repositories.therapy_repository import TherapyRepository
 from app.services.user_service import UserService
 from app.services.therapy_service import TherapyService
 from app.services.dose_service import DoseService
-from container import Services
+from app.container import Services
 from database.repositories.order_repository import OrderRepository
 from database.repositories.weight_repository import WeightRepository
 from services.order_service import OrderService

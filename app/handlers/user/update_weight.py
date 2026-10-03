@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, Message
 from app.keyboards.main_menu_keyboard import get_main_menu_keyboard
 from app.utils.validators import *
 from app.states.user.update_weight import UpdateWeightState
-from container import Services
+from app.container import Services
 from keyboards.user import get_show_weight_keyboard, get_cancel_update_weight_keyboard, get_confirm_weight_keyboard
 from texts.user import START_UPDATE_WEIGHT_TEXT, format_request_weight, format_confirm_weight, \
     format_success_change_weight

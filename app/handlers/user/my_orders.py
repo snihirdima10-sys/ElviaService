@@ -4,7 +4,7 @@ from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.types import Message,  ReplyKeyboardMarkup, KeyboardButton
 
-from container import Services
+from app.container import Services
 from keyboards.main_menu_keyboard import get_main_menu_keyboard
 from texts.user import format_orders_text
 
