@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
 
-from models.dose import Dose
+from app.models.dose import Dose
 
 
 class OrderStatus(StrEnum):

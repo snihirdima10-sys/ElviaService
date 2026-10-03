@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from app.states.admin.AdminState import AdminState
 from app.container import Services
-from utils.formatter import format_weeks
+from app.utils.formatter import format_weeks
 
 router = Router()
 STATUS_LABELS = {"new": "Нове", "processed": "Оброблено", "completed": "Завершено"}

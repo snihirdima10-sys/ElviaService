@@ -3,8 +3,8 @@ from aiogram.filters import StateFilter
 from aiogram.types import Message
 
 from app.container import Services
-from keyboards.user import get_therapy_history_keyboard
-from texts.user import format_therapy_history
+from app.keyboards.user import get_therapy_history_keyboard
+from app.texts.user import format_therapy_history
 
 router = Router()
 

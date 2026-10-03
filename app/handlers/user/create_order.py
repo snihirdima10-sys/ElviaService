@@ -6,11 +6,11 @@ from aiogram.types import CallbackQuery, Message
 from app.states.user.create_order import CreateOrderState
 from app.keyboards.main_menu_keyboard import get_main_menu_keyboard
 from app.container import Services
-from keyboards.user import get_show_order_details_keyboard, build_select_period_keyboard, get_order_terms_keyboard, \
+from app.keyboards.user import get_show_order_details_keyboard, build_select_period_keyboard, get_order_terms_keyboard, \
     get_cancel_order_keyboard, get_delivery_methods_keyboard, get_payment_details_keyboard, get_success_create_order
-from services.order_service import OrderCreateData
-from texts.user import format_order_details
-from utils.formatter import format_weeks
+from app.services.order_service import OrderCreateData
+from app.texts.user import format_order_details
+from app.utils.formatter import format_weeks
 from app.utils.validators import is_valid_city, is_valid_delivery_address
 
 

@@ -1,5 +1,5 @@
 from app.database.repositories.dose_repository import DoseRepository
-from models.dose import Dose
+from app.models.dose import Dose
 
 
 class DoseService:

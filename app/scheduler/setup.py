@@ -3,7 +3,7 @@ from datetime import datetime
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from .jobs import TIMEZONE, activate_due_therapies, request_weight
+from app.scheduler.jobs import TIMEZONE, activate_due_therapies, request_weight
 
 
 def create_scheduler(bot: Bot) -> AsyncIOScheduler:

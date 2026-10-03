@@ -1,11 +1,11 @@
 from datetime import date
 from html import escape
 
-from models.order import Order
-from models.therapy import Therapy
-from models.user import User
-from services.order_service import OrderPreview
-from utils.formatter import format_weeks
+from app.models.order import Order
+from app.models.therapy import Therapy
+from app.models.user import User
+from app.services.order_service import OrderPreview
+from app.utils.formatter import format_weeks
 
 START_UPDATE_WEIGHT_TEXT = (
     "⚖️<b> Час оновити вагу</b>\n\n"

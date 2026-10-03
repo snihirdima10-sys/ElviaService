@@ -2,8 +2,8 @@ import sqlite3
 from datetime import date
 
 from app.database.connection import get_connection
-from models.dose import Dose
-from models.therapy import Therapy, TherapyStatus
+from app.models.dose import Dose
+from app.models.therapy import Therapy, TherapyStatus
 
 
 # noinspection PyMethodMayBeStatic

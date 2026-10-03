@@ -20,10 +20,10 @@ from app.services.user_service import UserService
 from app.services.therapy_service import TherapyService
 from app.services.dose_service import DoseService
 from app.container import Services
-from database.repositories.order_repository import OrderRepository
-from database.repositories.weight_repository import WeightRepository
-from services.order_service import OrderService
-from services.weight_service import WeightService
+from app.database.repositories.order_repository import OrderRepository
+from app.database.repositories.weight_repository import WeightRepository
+from app.services.order_service import OrderService
+from app.services.weight_service import WeightService
 
 
 # from redis.asyncio import Redis

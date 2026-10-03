@@ -5,8 +5,8 @@ from aiogram.filters import StateFilter
 from aiogram.types import Message,  ReplyKeyboardMarkup, KeyboardButton
 
 from app.container import Services
-from keyboards.main_menu_keyboard import get_main_menu_keyboard
-from texts.user import format_orders_text
+from app.keyboards.main_menu_keyboard import get_main_menu_keyboard
+from app.texts.user import format_orders_text
 
 
 def get_my_orders_keyboard() -> ReplyKeyboardMarkup:

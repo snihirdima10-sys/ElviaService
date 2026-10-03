@@ -5,8 +5,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from aiogram.types import BufferedInputFile
 
-from utils.formatter import format_weeks
-from utils.user import calculate_bmi
+from app.utils.formatter import format_weeks
+from app.utils.user import calculate_bmi
 
 # Координати для шаблону 1198x1313
 RESULT_POS = (1080 // 2 + 20, 514 + 100)

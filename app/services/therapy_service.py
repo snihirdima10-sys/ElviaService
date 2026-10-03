@@ -3,8 +3,8 @@ from datetime import date
 from app.database.repositories.therapy_repository import TherapyRepository
 from app.database.repositories.user_repository import UserRepository
 from app.database.repositories.dose_repository import DoseRepository
-from models import therapy
-from models.therapy import Therapy
+from app.models import therapy
+from app.models.therapy import Therapy
 
 
 class TherapyService:

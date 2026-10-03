@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from database.repositories.dose_repository import DoseRepository
-from database.repositories.order_repository import OrderRepository
-from models.order import Order
+from app.database.repositories.dose_repository import DoseRepository
+from app.database.repositories.order_repository import OrderRepository
+from app.models.order import Order
 
 
 @dataclass(slots=True)

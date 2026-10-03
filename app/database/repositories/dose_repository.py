@@ -1,7 +1,7 @@
 import sqlite3
 
 from app.database.connection import  get_connection
-from models.dose import Dose
+from app.models.dose import Dose
 
 
 # noinspection PyMethodMayBeStatic

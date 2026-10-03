@@ -2,8 +2,8 @@ import sqlite3
 from datetime import datetime
 
 from app.database.connection import get_connection
-from models.dose import Dose
-from models.order import Order, OrderStatus
+from app.models.dose import Dose
+from app.models.order import Order, OrderStatus
 
 
 # noinspection PyRedeclaration

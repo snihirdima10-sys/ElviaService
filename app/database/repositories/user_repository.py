@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime, timedelta, date
 from app.database.connection import get_connection
-from models.user import User
+from app.models.user import User
 
 
 # noinspection PyMethodMayBeStatic

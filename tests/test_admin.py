@@ -1,11 +1,8 @@
-import sys
-from pathlib import Path
 from contextlib import closing
 from datetime import date, timedelta
 from types import SimpleNamespace
 from unittest.mock import patch, AsyncMock
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'app'))
 
 import unittest
 import test_scheduler

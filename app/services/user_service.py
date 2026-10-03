@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
 from app.database.repositories.user_repository import UserRepository
-from models.user import User
+from app.models.user import User
 
 
 class UserService:
