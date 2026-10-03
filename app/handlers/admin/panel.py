@@ -11,7 +11,7 @@ def get_admin_main_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="🔍 Знайти пацієнта")],
-            [KeyboardButton(text=" 📦 Замовлення")]
+            [KeyboardButton(text="📦 Замовлення")]
         ], resize_keyboard=True
     )
 
@@ -23,5 +23,6 @@ router =  Router()
 
 @router.message(Command("admin"))
 async def show_admin_panel(message: Message, state: FSMContext):
+    await state.clear()
     await state.set_state(AdminState.show_admin_panel)
     await message.answer("👨‍⚕️ ПАНЕЛЬ ЛІКАРЯ\n\nОберіть потрібний розділ:", reply_markup=get_admin_main_menu_keyboard())

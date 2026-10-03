@@ -1,179 +1,129 @@
+from html import escape
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from app.states.admin.AdminState import AdminState
+from container import Services
 from utils.formatter import format_weeks
 
-
-def get_order_status_keyboard(order: dict) -> InlineKeyboardMarkup:
-    buttons = []
-
-    if order["status"] == "NEW":
-        buttons.append([
-            InlineKeyboardButton(
-                text="🔄 Взяти в роботу",
-                callback_data=f"order_status:{order['id']}:processed"
-            )
-        ])
-
-    elif order["status"] == "processed":
-        buttons.append([
-            InlineKeyboardButton(
-                text="✅ Завершити",
-                callback_data=f"order_status:{order['id']}:completed"
-            )
-        ])
-
-    buttons.append([
-        InlineKeyboardButton(
-            text="⬅️ Назад",
-            callback_data="back_to_show_orders"
-        )
-    ])
-
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
 router = Router()
-
-# status = ["new", "processed", "completed"]
-
-title = {
-    "new" : "🆕 НОВІ ЗАМОВЛЕННЯ",
-    "processed" : "🔄 ОПРАЦЬОВАНІ",
-    "completed" : "✅ ЗАВЕРШЕНІ"
-}
-
-@router.message(F.text == "📦 Замовлення", AdminState.show_admin_panel)
-async def get_category_orders(message:Message, state: FSMContext):
-    new_orders = get_orders_by_status("NEW")
-    processed_orders = get_orders_by_status("processed")
-    completed_orders = get_orders_by_status("completed")
-
-    await state.update_data(
-        new_orders=new_orders,
-        processed_orders=processed_orders,
-        completed_orders=completed_orders
-    )
-
-    await show_category(message=message, state=state)
+STATUS_LABELS = {"new": "Нове", "processed": "Оброблено", "completed": "Завершено"}
+PAGE_SIZE = 10
 
 
-async def show_category(message: Message, state: FSMContext):
-    data = await state.get_data()
-    new_orders = data["new_orders"]
-    processed_orders = data["processed_orders"]
-    completed_orders = data["completed_orders"]
+def category_keyboard():
+    rows = [[InlineKeyboardButton(text="Усі замовлення", callback_data="admin_orders:all:0")]]
+    for status, label in STATUS_LABELS.items():
+        rows.append([InlineKeyboardButton(text=label, callback_data=f"admin_orders:{status}:0")])
+    rows.append([InlineKeyboardButton(text="🏠 Панель лікаря", callback_data="admin_main_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-    inline_keyboard= InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=f"🆕 Нові ({len(new_orders)})", callback_data="orders:new")],
-            [InlineKeyboardButton(text=f"🔄 Опрацьовані ({len(processed_orders)})", callback_data="orders:processed")],
-            [InlineKeyboardButton(text=f"✅ Завершені ({len(completed_orders)})", callback_data="orders:completed")],
-            [InlineKeyboardButton(text=f"🏠 Головне меню", callback_data="back_to_main_menu")],
-        ]
-    )
-
-    text = ("📦 ЗАМОВЛЕННЯ\n\n"
-            "Оберіть статус, щоб переглянути замовлення:")
-
+@router.message(F.text.in_({"📦 Замовлення", " 📦 Замовлення"}))
+async def get_category_orders(message: Message, state: FSMContext):
+    await state.clear()
     await state.set_state(AdminState.show_category_orders)
+    await message.answer("📦 Замовлення\n\nОберіть статус:", reply_markup=category_keyboard())
 
-    if data.get("message_id"):
-        await message.edit_text(text, reply_markup=inline_keyboard)
-        await state.update_data(message_id=[])
+
+@router.callback_query(F.data == "admin_order_categories", AdminState.show_category_orders)
+async def show_categories(query: CallbackQuery):
+    await query.answer()
+    if isinstance(query.message, Message):
+        await query.message.edit_text("📦 Замовлення\n\nОберіть статус:", reply_markup=category_keyboard())
+
+
+async def show_orders(query: CallbackQuery, state: FSMContext, services: Services):
+    if not isinstance(query.message, Message):
         return
-    else:
-        await message.answer(text, reply_markup=inline_keyboard)
-
-@router.callback_query(F.data.startswith("orders:"), AdminState.show_category_orders)
-async def get_orders(query: CallbackQuery, state: FSMContext):
-    if query.data is None:
-        return
-    status = query.data.split(":")[1]
-    await state.update_data(status=status)
-
-    await show_orders(query=query, state=state)
-
-
-async def show_orders(query: CallbackQuery, state: FSMContext):
-
     data = await state.get_data()
+    status = data.get("order_filter", "all")
+    orders = services.order.get_admin_orders(None if status == "all" else status)
+    page = min(data.get("order_page", 0), max(0, (len(orders) - 1) // PAGE_SIZE))
+    await state.update_data(order_page=page)
+    rows = []
+    for order in orders[page * PAGE_SIZE:(page + 1) * PAGE_SIZE]:
+        rows.append([InlineKeyboardButton(
+            text=f"№{order['id']} — {order['full_name']} — {STATUS_LABELS[order['status']]}",
+            callback_data=f"admin_order:{order['id']}")])
+    navigation = []
+    if page > 0:
+        navigation.append(InlineKeyboardButton(text="⬅️", callback_data=f"admin_orders:{status}:{page - 1}"))
+    if (page + 1) * PAGE_SIZE < len(orders):
+        navigation.append(InlineKeyboardButton(text="➡️", callback_data=f"admin_orders:{status}:{page + 1}"))
+    if navigation:
+        rows.append(navigation)
+    rows.append([InlineKeyboardButton(text="⬅️ До фільтрів", callback_data="admin_order_categories")])
+    title = STATUS_LABELS.get(status, "Усі замовлення")
+    text = f"📦 {title}\n\n" + (f"Оберіть замовлення. Сторінка {page + 1}." if orders else "Замовлень поки немає.")
+    await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
 
-    status = data["status"]
-    orders = data[f"{status}_orders"]
 
-    builder = InlineKeyboardBuilder()
-
-    for order in orders:
-        builder.add(InlineKeyboardButton(text=f"{order["full_name"]}", callback_data=f"order:{order['id']}"))
-
-    builder.add(InlineKeyboardButton(text="⬅️ До статусів замовлень", callback_data="back_to_show_category"))
-    builder.adjust(1)
-    inline_keyboard = builder.as_markup()
-
-    text = (f"{title[status]}\n\n"
-            "Оберіть пацієнта, щоб переглянути замовлення:")
-
-
-    await query.message.edit_text(text, reply_markup=inline_keyboard)
-
-
-@router.callback_query(F.data.startswith("order:"), AdminState.show_category_orders)
-async def show_order(query: CallbackQuery):
-    order_id = int(query.data.split(":")[1])
-    order = get_order(order_id)
-    if not order:
+@router.callback_query(F.data.startswith("admin_orders:"), AdminState.show_category_orders)
+async def filter_orders(query: CallbackQuery, state: FSMContext, services: Services):
+    _, status, page_text = query.data.split(":")
+    if status not in {*STATUS_LABELS, "all"} or not page_text.isdecimal():
+        await query.answer("Невідомий фільтр", show_alert=True)
         return
+    await query.answer()
+    await state.update_data(order_filter=status, order_page=int(page_text))
+    await show_orders(query, state, services)
 
-    inline_keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="Назад", callback_data="back_to_show_orders")]
-        ]
+
+async def show_order(query: CallbackQuery, order: dict):
+    rows = [[InlineKeyboardButton(text=f"Змінити на: {label}",
+              callback_data=f"admin_order_status:{order['id']}:{status}")]
+            for status, label in STATUS_LABELS.items() if status != order["status"]]
+    rows.append([InlineKeyboardButton(text="⬅️ До списку", callback_data="admin_orders_back")])
+    text = (
+        f"📦 <b>Замовлення №{order['id']}</b>\n\n"
+        f"Статус: <b>{STATUS_LABELS[order['status']]}</b>\n"
+        f"Препарат: {escape(order['medication'])} · {order['dose_value']} мг\n"
+        f"Період: {format_weeks(order['weeks_count'])}\n"
+        f"Сума: {order['total_price']:.2f} грн\n"
+        f"Дата: {escape(order['created_at'])}\n\n"
+        f"Одержувач: {escape(order['full_name'])}\n"
+        f"Телефон: {escape(order['user_phone'])}\n"
+        f"Доставка: {escape(order['delivery_data'])}"
     )
-    text = (f"📦 Замовлення #{order["id"]}\n"
-            f"💉 Препарат: {order["medication"]}\n"
-            f"⚖️ Дозування: {order["dose_value"]} мг\n"
-            f"📅 Період: {format_weeks(order["weeks_count"])}\n"
-            f"💳 Сума: {order["total_price"]} грн\n"
-            f"👤 Одержувач: {order["full_name"]}\n"
-            f"📱 Телефон: {order["user_phone"]}\n"
-            f"📮 Доставка: {order["delivery_data"]}")
-
-    await query.message.edit_text(text, reply_markup=get_order_status_keyboard(order))
-
-@router.callback_query(F.data =="back_to_show_category")
-async def back_to_show_category(query: CallbackQuery, state: FSMContext):
-    await query.answer()
-    await state.update_data(message_id=query.message.message_id)
-    await show_category(query.message, state=state)
-
-@router.callback_query(F.data == "back_to_show_orders")
-async def back_to_show_orders(query: CallbackQuery, state: FSMContext):
-    await query.answer()
-    await show_orders(query=query, state=state)
+    if isinstance(query.message, Message):
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
 
 
-@router.callback_query(F.data.startswith("order_status:"))
-async def change_order_status(query: CallbackQuery, state: FSMContext):
-    await query.answer()
-
-    if query.data is None:
-        return
-
-    _, order_id, new_status = query.data.split(":", 2)
-
-    order_id = int(order_id)
-    ALLOWED_ORDER_STATUSES = {"new", "processed", "completed"}
-    if new_status not in ALLOWED_ORDER_STATUSES:
-        await query.answer("Некоректний статус", show_alert=True)
-        return
-
-    order = get_order(order_id)
-
+@router.callback_query(F.data.startswith("admin_order:"), AdminState.show_category_orders)
+async def open_order(query: CallbackQuery, services: Services):
+    order = services.order.get_admin_order(int(query.data.split(":")[1]))
     if order is None:
         await query.answer("Замовлення не знайдено", show_alert=True)
         return
+    await query.answer()
+    await show_order(query, order)
+
+
+@router.callback_query(F.data == "admin_orders_back", AdminState.show_category_orders)
+async def back_to_orders(query: CallbackQuery, state: FSMContext, services: Services):
+    await query.answer()
+    await show_orders(query, state, services)
+
+
+@router.callback_query(F.data.startswith("admin_order_status:"), AdminState.show_category_orders)
+async def change_order_status(query: CallbackQuery, services: Services):
+    _, order_id, status = query.data.split(":")
+    if status not in STATUS_LABELS:
+        await query.answer("Некоректний статус", show_alert=True)
+        return
+    order = services.order.get_admin_order(int(order_id))
+    if order is None:
+        await query.answer("Замовлення не знайдено", show_alert=True)
+        return
+    if order["status"] == status:
+        await query.answer("Цей статус уже встановлено")
+        return
+    if not services.order.update_status(int(order_id), status):
+        await query.answer("Не вдалося змінити статус", show_alert=True)
+        return
+    await query.answer("Статус змінено")
+    order["status"] = status
+    await show_order(query, order)

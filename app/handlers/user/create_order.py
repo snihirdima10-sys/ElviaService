@@ -11,6 +11,7 @@ from keyboards.user import get_show_order_details_keyboard, build_select_period_
 from services.order_service import OrderCreateData
 from texts.user import format_order_details
 from utils.formatter import format_weeks
+from app.utils.validators import is_valid_city, is_valid_delivery_address
 
 
 async def show_order_details(message: Message, state: FSMContext, services: Services) -> None:
@@ -122,7 +123,7 @@ async def show_order_terms(query: CallbackQuery, state: FSMContext, services: Se
     await query.message.edit_text(text, reply_markup=get_order_terms_keyboard())
 
 
-@router.callback_query(F.data == "accept_order_terms")
+@router.callback_query(F.data == "accept_order_terms", CreateOrderState.wait_for_terms_confirmation)
 async def request_city(query: CallbackQuery, state: FSMContext) -> None:
     await query.answer()
     if not isinstance(query.message, Message):
@@ -135,7 +136,8 @@ async def request_city(query: CallbackQuery, state: FSMContext) -> None:
 
 @router.message(CreateOrderState.wait_for_city)
 async def process_city(message: Message, state: FSMContext, bot: Bot) -> None:
-    if message.text is None:
+    if message.text is None or not is_valid_city(message.text):
+        await message.answer("Введіть назву міста текстом, наприклад: Київ.")
         return
     data = await state.get_data()
     message_id = data.get("message_id")
@@ -147,7 +149,7 @@ async def process_city(message: Message, state: FSMContext, bot: Bot) -> None:
             reply_markup=None,
         )
 
-    await state.update_data(city=message.text)
+    await state.update_data(city=message.text.strip())
     await request_delivery_methods(message=message, state=state)
 
 
@@ -158,6 +160,7 @@ async def request_delivery_methods(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data.startswith("method:"), CreateOrderState.wait_for_delivery_method)
 async def process_delivery_method(query: CallbackQuery, state: FSMContext) -> None:
+    await query.answer()
     if query.data is None:
         return
     if not isinstance(query.message, Message):
@@ -197,9 +200,10 @@ async def request_address(query: CallbackQuery, state: FSMContext) -> None:
 
 @router.message(CreateOrderState.wait_for_address)
 async def process_delivery_data(message: Message, state: FSMContext, bot: Bot, services:Services):
-    if message.text is None:
-        return
     order = await state.get_data()
+    if message.text is None or not is_valid_delivery_address(message.text, order.get("delivery_method")):
+        await message.answer("Введіть додатний номер відділення/поштомату або повну адресу для кур’єрської доставки.")
+        return
     delivery_message_id = order.get("delivery_message_id")
 
     if delivery_message_id is not None:
@@ -209,7 +213,7 @@ async def process_delivery_data(message: Message, state: FSMContext, bot: Bot, s
             reply_markup=None,
         )
 
-    address = message.text
+    address = message.text.strip()
     # format_method = {"branch": "Відділення", "parcel_locker": "Поштомат", "courier_delivery":"Адреса"}
 
     await state.update_data(address=address)
@@ -249,7 +253,7 @@ async def show_payment_details(query: CallbackQuery, state: FSMContext, services
         "Отримувач: [ПІБ / назва]\n"
         "IBAN: [номер рахунку]\n"
         "Призначення платежу: <b>Замовлення №1042</b>\n\n"
-        "Після здійснення оплати натисніть <b>«Оплачено»</b> та надішліть підтвердження платежу.\n\n"
+        "Після здійснення оплати натисніть <b>«Оплачено»</b>\n\n"
         "Дякуємо за ваше замовлення 🙌🏻🌿"
     )
 
@@ -275,6 +279,7 @@ async def create_order(query: CallbackQuery, state: FSMContext, services: Servic
     )
 
     order_id = services.order.create_order(order_data)
+    await state.clear()
     if order_id:
         await query.message.edit_text("✅ Замовлення успішно оформлено")
         await query.message.answer(
@@ -286,7 +291,7 @@ async def create_order(query: CallbackQuery, state: FSMContext, services: Servic
         await query.message.edit_text("Щось пішло не так")
 
 
-@router.callback_query(F.data == "cancel:order")
+@router.callback_query(F.data == "cancel:order", StateFilter(CreateOrderState))
 async def cancel_order(query: CallbackQuery, state: FSMContext):
     await query.answer()
     if not isinstance(query.message, Message):
@@ -298,9 +303,8 @@ async def cancel_order(query: CallbackQuery, state: FSMContext):
     await query.message.answer("❌ Замовлення скасоване", reply_markup=get_main_menu_keyboard())
 
 
-@router.callback_query(F.data == "edit_delivery_data")
+@router.callback_query(F.data == "edit_delivery_data", CreateOrderState.wait_for_order_confirmation)
 async def edit_delivery_data(query: CallbackQuery, state: FSMContext):
-    await query.answer()
     await request_city(query=query, state=state)
 
 

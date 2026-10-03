@@ -1,3 +1,4 @@
+from dataclasses import asdict, is_dataclass
 from aiogram import F, Router
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -46,6 +47,8 @@ async def process_patient_data(message: Message, state: FSMContext, services: Se
                          reply_markup=build_patients_keyboard(users))
 
 async def show_user_card(event: Message | CallbackQuery, user: dict, state: FSMContext, therapy_service: TherapyService):
+    if is_dataclass(user):
+        user = asdict(user)
     user_id = user["id"]
     active_therapy = therapy_service.get_active_therapy_by_user_id(user_id)
     planned_therapy = therapy_service.get_planned_therapy_by_user_id(user_id)
@@ -92,6 +95,7 @@ async def select_patient(query: CallbackQuery, state: FSMContext, user_service :
 
 @router.callback_query(F.data == "admin_main_menu")
 async def go_to_admin_panel(query: CallbackQuery, state: FSMContext):
+    await query.answer()
     await state.clear()
     await state.set_state(AdminState.show_admin_panel)
 

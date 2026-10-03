@@ -93,7 +93,18 @@ class TherapyRepository:
 
     def get_history_by_user_id(self, user_id: int) -> list[Therapy] | None:
         """Повертає список завершених терапій"""
-        pass
+        connection = get_connection()
+        try:
+            rows = connection.execute("""
+                SELECT therapies.*, doses.id AS dose_id,
+                       doses.medication, doses.dose_value, doses.price
+                FROM therapies JOIN doses ON doses.id = therapies.dose_id
+                WHERE therapies.user_id = ? AND therapies.status = 'completed'
+                ORDER BY therapies.start_date, therapies.id
+            """, (user_id,)).fetchall()
+            return [self._map_to_therapy(row) for row in rows]
+        finally:
+            connection.close()
 
     def complete_therapy(self, therapy_id: int, end_weight: float) -> None:
         """Позначає терапію завершеною, встановлює end_weight та end_date"""
@@ -110,9 +121,30 @@ class TherapyRepository:
             start_date: str,
             start_weight: float,
             status: str,
-    ) -> None:
+    ) -> int:
         """Створює терапію."""
-        pass
+        connection = get_connection()
+        try:
+            with connection:
+                connection.execute("BEGIN IMMEDIATE")
+                connection.execute(
+                    "UPDATE therapies SET status = 'cancelled' WHERE user_id = ? AND status = 'planned'",
+                    (user_id,),
+                )
+                if status == "active":
+                    connection.execute(
+                        """UPDATE therapies SET status = 'completed', end_date = ?, end_weight = ?
+                           WHERE user_id = ? AND status = 'active'""",
+                        (start_date, start_weight, user_id),
+                    )
+                cursor = connection.execute(
+                    """INSERT INTO therapies (user_id, dose_id, start_date, start_weight, status)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (user_id, dose_id, start_date, start_weight, status),
+                )
+                return cursor.lastrowid
+        finally:
+            connection.close()
 
     def _map_to_therapy(self, row: sqlite3.Row) -> Therapy:
         return Therapy(

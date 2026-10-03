@@ -19,10 +19,14 @@ async def progress(message: Message, services: Services):
     tg_id = message.from_user.id
     user_id = services.user.get_user_id_by_tg_id(tg_id)
     if user_id is None:
+        await message.answer("Спочатку зареєструйтеся за допомогою /start.")
         return
 
-    start_date = services.therapy.get_first_therapy_start_date_by_user_id(user_id)
-    if start_date is None:
+    active_therapy = services.therapy.get_active_therapy_by_user_id(user_id)
+    stages = list(services.therapy.get_history_therapy_by_user_id(user_id) or [])
+    if active_therapy:
+        stages.append(active_therapy)
+    if not active_therapy:
         await message.answer(
             "📊 Мій прогрес\n\n"
             "Прогрес поки що не відображається.\n"
@@ -31,8 +35,10 @@ async def progress(message: Message, services: Services):
         , reply_markup=get_main_menu_keyboard())
         return
 
+    start_date = min(stage.start_date for stage in stages)
     user = services.user.get_by_user_id(user_id)
     if user is None:
+        await message.answer("Не вдалося знайти ваші дані. Спробуйте /start.")
         return
 
     # Відправляємо картинку користувачу

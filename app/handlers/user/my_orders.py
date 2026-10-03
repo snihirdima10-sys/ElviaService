@@ -1,13 +1,11 @@
-from datetime import datetime
+
 
 from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.types import Message,  ReplyKeyboardMarkup, KeyboardButton
 
-from app.utils.formatter import format_weeks
 from container import Services
 from keyboards.main_menu_keyboard import get_main_menu_keyboard
-from models.order import Order
 from texts.user import format_orders_text
 
 

@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from aiogram import F, Router
+from aiogram.filters import StateFilter
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, \
     InlineKeyboardButton, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -66,7 +67,7 @@ async def show_registration_confirmation(message: Message, state: FSMContext):
     )
 
 
-@router.callback_query(F.data == "start_registration")
+@router.callback_query(F.data == "start_registration", StateFilter(None))
 async def start_registration(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     if not isinstance(callback.message, Message):
@@ -180,6 +181,10 @@ async def process_target_weight(message: Message, state: FSMContext):
 @router.message(RegistrationStates.wait_for_phone)
 async def process_phone(message: Message, state: FSMContext):
     if message.contact is None:
+        await message.answer("Натисніть «📱 Поділитися номером телефону» внизу екрана.", reply_markup=get_phone_share_keyboard())
+        return
+    if message.from_user is None or message.contact.user_id != message.from_user.id:
+        await message.answer("Поділіться власним номером через кнопку нижче.", reply_markup=get_phone_share_keyboard())
         return
 
     phone = message.contact.phone_number
@@ -267,8 +272,3 @@ async def edit_registration(callback: CallbackQuery, state: FSMContext):
     await state.clear()
 
     await start_registration(callback=callback, state=state)
-
-
-@router.message(F.text == "🏠 Головне меню")
-async def back_to_menu(message: Message):
-    await message.answer('Головне меню:', reply_markup=get_main_menu_keyboard())

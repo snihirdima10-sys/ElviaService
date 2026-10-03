@@ -1,5 +1,6 @@
 from datetime import date
 from io import BytesIO
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 from aiogram.types import BufferedInputFile
@@ -14,6 +15,7 @@ CURRENT_WEIGHT_POS = (485 + 108 + 20, 800 + 100)
 GOAL_WEIGHT_POS = (810 + 120 + 20, 800 + 100)
 BMI_POS = (175 + 183, 980 + 100)
 THERAPY_WEEKS_POS = (660 + 183+10, 980 + 100)
+ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 
 
 def generate_progress_photo(
@@ -34,13 +36,14 @@ def generate_progress_photo(
     weeks = format_weeks(weeks)
 
     # Відкриваємо шаблон
-    image = Image.open("app/assets/progress_template_new.png").convert("RGB")
+    with Image.open(ASSETS_DIR / "progress_template_new.png") as template:
+        image = template.convert("RGB")
 
     draw = ImageDraw.Draw(image)
 
     # Підключаємо шрифти
-    font_result = ImageFont.truetype("app/assets/fonts/BalsamiqSans-Bold.ttf", 80)
-    font_medium = ImageFont.truetype("app/assets/fonts/BalsamiqSans-Regular.ttf", 42)
+    font_result = ImageFont.truetype(str(ASSETS_DIR / "fonts/BalsamiqSans-Bold.ttf"), 80)
+    font_medium = ImageFont.truetype(str(ASSETS_DIR / "fonts/BalsamiqSans-Regular.ttf"), 42)
 
     # Додаємо дані на картинку
     draw.text(
@@ -104,5 +107,5 @@ def generate_progress_photo(
     buffer.seek(0)
     return BufferedInputFile(
         buffer.getvalue(),
-        filename="progress.png"
+        filename="progress.jpg"
     )

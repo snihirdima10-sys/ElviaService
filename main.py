@@ -6,10 +6,8 @@ from aiogram.enums import ParseMode
 
 from config import BOT_TOKEN
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
 from app.database.init_db import init_db
-from app.scheduler import request_weight, is_active
+from app.scheduler import create_scheduler
 
 from app.handlers.user import router as user_router
 from app.handlers.admin import router as admin_router
@@ -81,6 +79,9 @@ async def main():
     dp = Dispatcher()
 
     dp["services"] = services
+    dp["user_service"] = user_service
+    dp["therapy_service"] = therapy_service
+    dp["dose_service"] = dose_service
 
 
     dp.include_router(admin_router)
@@ -88,27 +89,15 @@ async def main():
 
     init_db()
 
-    scheduler = AsyncIOScheduler()
-
-    scheduler.add_job(
-        request_weight,
-        trigger="cron",
-        hour=10,
-        minute=00,
-        kwargs={"bot": bot}
-    )
-
-    scheduler.add_job(
-        is_active,
-        trigger="interval",
-        minutes=2,
-        args=[therapy_service],
-    )
-
+    scheduler = create_scheduler(bot)
     scheduler.start()
 
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+        await dp.start_polling(bot)
+    finally:
+        scheduler.shutdown(wait=False)
+        await bot.session.close()
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -11,7 +11,7 @@ def is_valid_full_name(full_name: str) -> bool:
         if len(part) < 2:
             return False
 
-        if not part.replace('-','').replace("'",'').isalpha():
+        if not part.replace('-','').replace("'",'').replace("’",'').isalpha():
             return False
 
     return True
@@ -47,7 +47,25 @@ def normalize_phone(phone: str) -> str | None:
     return None
 
 def is_valid_phone(phone: str) -> bool:
-    return True
+    return re.fullmatch(r"\+?[1-9][0-9]{6,14}", phone.strip()) is not None
+
+
+def is_valid_city(text: str) -> bool:
+    text = text.strip()
+    return 2 <= len(text) <= 100 and any(char.isalpha() for char in text) and all(
+        char.isalpha() or char.isdecimal() or char in " -'’ʼ()." for char in text
+    )
+
+
+def is_valid_delivery_address(text: str, method: str | None) -> bool:
+    text = text.strip()
+    if method in ("branch", "parcel_locker"):
+        return re.fullmatch(r"[0-9]{1,10}", text) is not None and int(text) > 0
+    if method == "courier_delivery":
+        return 5 <= len(text) <= 300 and any(char.isalpha() for char in text) and any(
+            char.isdecimal() for char in text
+        )
+    return False
 
 def validate_delivery_data(text: str) -> dict | None:
     lines = [line.strip() for line in text.splitlines() if line.strip()]

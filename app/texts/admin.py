@@ -28,8 +28,8 @@ def format_user_card(user: dict, active_therapy: dict, planned_therapy: dict) ->
     else:
         patient_card += (
             f"💉 <b>ПОТОЧНА ТЕРАПІЯ</b>\n\n"
-            f"<b>{active_therapy["medication"]} · {active_therapy['dose_value']} мг</b>\n\n"
-            f"Початок терапії: <b>{active_therapy['start_date']}</b>\n\n"
+            f"<b>{active_therapy.dose.medication} · {active_therapy.dose.dose_value} мг</b>\n\n"
+            f"Початок терапії: <b>{active_therapy.start_date}</b>\n\n"
             "━━━━━━━━━━━━━━\n\n"
         )
 
@@ -42,8 +42,8 @@ def format_user_card(user: dict, active_therapy: dict, planned_therapy: dict) ->
     else:
         patient_card += (
             f"🌿 <b>НАСТУПНИЙ ЕТАП</b>\n\n"
-            f"<b>{planned_therapy["medication"]} · {planned_therapy['dose_value']} мг</b>\n\n"
-            f"Початок терапії: <b>{planned_therapy['start_date']}</b>\n"
+            f"<b>{planned_therapy.dose.medication} · {planned_therapy.dose.dose_value} мг</b>\n\n"
+            f"Початок терапії: <b>{planned_therapy.start_date}</b>\n"
         )
 
     return patient_card
@@ -60,12 +60,12 @@ def format_therapies_history(user : dict, active_therapy: dict, therapies_histor
 
         )
     else:
-        start_date = datetime.strptime(active_therapy["start_date"], "%Y-%m-%d").date()
+        start_date = active_therapy.start_date
         weeks = (date.today() - start_date).days // 7
 
         active_therapy_text = (
             "✅ <b>Поточний етап</b>\n\n"
-            f"<b>{active_therapy["medication"]} • {active_therapy["dose_value"]} мг</b>\n\n"
+            f"<b>{active_therapy.dose.medication} • {active_therapy.dose.dose_value} мг</b>\n\n"
             f"Початок: {start_date.strftime("%d.%m.%Y")}\n"
             f"Тривалість: {format_weeks(weeks)}\n"
             f"Актуальна вага: {user["current_weight"]} кг\n\n"
@@ -78,25 +78,28 @@ def format_therapies_history(user : dict, active_therapy: dict, therapies_histor
 
     if therapies_history:
         for therapy in therapies_history:
-            start_date = datetime.strptime(therapy["start_date"], "%Y-%m-%d").date()
-            end_date = datetime.strptime(therapy["end_date"], "%Y-%m-%d").date()
-            weeks = (date.today() - start_date).days // 7
-            start_weight = therapy["start_weight"]
-            end_weight = therapy["end_weight"]
+            start_date = therapy.start_date
+            end_date = therapy.end_date
+            if end_date is None or therapy.end_weight is None:
+                history_therapy_text += "Дані етапу неповні\n"
+                continue
+            weeks = (end_date - start_date).days // 7
+            start_weight = therapy.start_weight
+            end_weight = therapy.end_weight
             result_weight = round(start_weight - end_weight, 1)
 
             history_therapy_text += (
-                f"<b>{therapy["medication"]} • {therapy["dose_value"]} мг</b>\n\n"
+                f"<b>{therapy.dose.medication} • {therapy.dose.dose_value} мг</b>\n\n"
                 f"Період: {start_date.strftime("%d.%m")}–{end_date.strftime("%d.%m.%Y")}\n"
                 f"Тривалість: {format_weeks(weeks)}\n"
-                f"Вага: {therapy["start_weight"]} → {therapy["end_weight"]} кг\n"
+                f"Вага: {therapy.start_weight} → {therapy.end_weight} кг\n"
                 f"Результат: <b>{result_weight} кг</b>\n"
                 f"──────────────\n"
             )
     else:
         history_therapy_text += "Відсутні завершені терапії"
 
-    start_date = datetime.strptime(user["created_at"], "%Y-%m-%d %H:%M:%S").date()
+    start_date = date.fromisoformat(str(user["created_at"])[:10])
     start_weight = user["start_weight"]
     current_weight = user["current_weight"]
     result_weight = round(current_weight - start_weight, 1)

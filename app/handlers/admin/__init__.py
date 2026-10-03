@@ -13,7 +13,7 @@ router.message.filter(IsAdmin())
 router.callback_query.filter(IsAdmin())
 
 router.include_router(panel_router)
+router.include_router(orders_router)
 router.include_router(find_patient_router)
 router.include_router(change_dose_router)
 router.include_router(therapy_history_router)
-router.include_router(orders_router)

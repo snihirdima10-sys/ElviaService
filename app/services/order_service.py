@@ -30,6 +30,17 @@ class OrderService:
     def get_all_orders_by_user_id(self, user_id: int) -> list[Order]:
         return self.order_repository.get_all_by_user_id(user_id)
 
+    def get_admin_orders(self, status: str | None = None) -> list[dict]:
+        return self.order_repository.get_all_by_status(status)
+
+    def get_admin_order(self, order_id: int) -> dict | None:
+        return self.order_repository.get_by_id(order_id)
+
+    def update_status(self, order_id: int, status: str) -> bool:
+        if status not in {"new", "processed", "completed"}:
+            raise ValueError("Невідомий статус замовлення")
+        return self.order_repository.update_status(order_id, status)
+
     def calculate_discount(self, weeks_count: int) -> int:
         match weeks_count:
             case 1:

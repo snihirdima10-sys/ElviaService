@@ -47,24 +47,6 @@ class OrderRepository:
             connection.close()
 
 
-    def get_all_by_status(self, status: str) -> list| None:
-        pass
-
-    def update_status(self, order_id: int, status: str) -> bool:
-        pass
-
-    def create(self,
-               user_id: int,
-               user_phone: str,
-               dose_id: int,
-               weeks_count: int,
-               discount: int,
-               total_price: float,
-               delivery_data: str,
-               status: str
-    ) -> int:
-        pass
-
     def get_by_id(self, order_id: int) -> dict | None:
         connection = get_connection()
         cursor = connection.cursor()
@@ -76,7 +58,8 @@ class OrderRepository:
                     orders.*,
                     doses.medication,
                     doses.dose_value,
-                    users.full_name
+                    users.full_name,
+                    users.phone AS user_phone
                 FROM orders
                 JOIN doses
                     ON orders.dose_id = doses.id
@@ -124,7 +107,7 @@ class OrderRepository:
         finally:
             connection.close()
 
-    def get_all_by_status(self, status: str) -> list | None:
+    def get_all_by_status(self, status: str | None = None) -> list[dict]:
         connection = get_connection()
         cursor = connection.cursor()
 
@@ -137,13 +120,14 @@ class OrderRepository:
                 FROM orders
                 JOIN users 
                     ON users.id = orders.user_id 
-                WHERE status = ?""",
-                (status,)
+                WHERE (? IS NULL OR orders.status = ?)
+                ORDER BY orders.created_at DESC, orders.id DESC""",
+                (status, status)
             )
 
             orders = cursor.fetchall()
             connection.close()
-            return [dict(order) for order in orders] if orders else None
+            return [dict(order) for order in orders]
 
         finally:
             connection.close()

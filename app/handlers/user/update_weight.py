@@ -20,7 +20,7 @@ async def show_weight(message: Message, state: FSMContext):
     await message.answer(START_UPDATE_WEIGHT_TEXT, reply_markup=get_show_weight_keyboard())
 
 
-@router.callback_query(F.data == "update_weight", UpdateWeightState.show_weight)
+@router.callback_query(F.data == "update_weight", StateFilter(None, UpdateWeightState.show_weight))
 async def request_weight(query: CallbackQuery, state: FSMContext, services: Services):
     await query.answer()
     if not isinstance(query.message, Message):
@@ -86,13 +86,12 @@ async def show_confirm_weight(message: Message, state: FSMContext, services: Ser
     await message.answer(format_confirm_weight(last_weight=user.current_weight, new_weight=new_weight), reply_markup=get_confirm_weight_keyboard())
 
 
-@router.callback_query(F.data == "repeat_weight")
+@router.callback_query(F.data == "repeat_weight", UpdateWeightState.confirm_weight)
 async def repeat_weight(query: CallbackQuery, state: FSMContext, services: Services):
-    await query.answer()
     await request_weight(query, state=state, services=services)
 
 
-@router.callback_query(F.data == "confirm_weight")
+@router.callback_query(F.data == "confirm_weight", UpdateWeightState.confirm_weight)
 async def confirm_weight(query: CallbackQuery, state: FSMContext, services: Services):
     await query.answer()
     if not isinstance(query.message, Message):
@@ -108,7 +107,7 @@ async def confirm_weight(query: CallbackQuery, state: FSMContext, services: Serv
     if not isinstance(new_weight, float):
         return
 
-    last_weight = patient.current_weight
+    start_weight= patient.start_weight
 
     weight_id = services.weight.add_weight_by_user_id(user_id=patient.id, weight=new_weight)
     rowcount = services.user.update_current_weight_by_user_id(user_id=patient.id, new_weight=new_weight)
@@ -117,13 +116,14 @@ async def confirm_weight(query: CallbackQuery, state: FSMContext, services: Serv
         await query.message.answer("Не вдалося оновити вагу, повторіть спробу пізніше")
         return
 
-    await query.message.edit_text(format_success_change_weight(last_weight, new_weight))
+    await query.message.edit_text(format_success_change_weight(start_weight, new_weight))
     await query.message.answer("Головне меню:", reply_markup=get_main_menu_keyboard())
     await state.clear()
 
 
-@router.callback_query(F.data == "cancel:update_weight")
+@router.callback_query(F.data == "cancel:update_weight", StateFilter(UpdateWeightState))
 async def cancel_update_weight(query: CallbackQuery, state: FSMContext):
+    await query.answer()
     if not isinstance(query.message, Message):
         return
     await query.message.edit_text("❌ Оновлення ваги скасовано")

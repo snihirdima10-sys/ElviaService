@@ -18,7 +18,8 @@ def get_therapy_history_keyboard():
 
 def get_show_weight_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="⚖️ Оновити вагу", callback_data="update_weight")]
+            [InlineKeyboardButton(text="⚖️ Оновити вагу", callback_data="update_weight")],
+            [InlineKeyboardButton(text="↩️ Скасувати", callback_data="cancel:update_weight")]
         ]
     )
 

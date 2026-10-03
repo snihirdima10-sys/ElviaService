@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
@@ -16,8 +17,9 @@ from app.services.therapy_service import TherapyService
 router = Router()
 
 
-@router.callback_query(F.data == "therapy_history")
+@router.callback_query(F.data == "therapy_history", AdminState.show_patient)
 async def show_therapy_history(query: CallbackQuery, state: FSMContext, user_service: UserService, therapy_service: TherapyService):
+    await query.answer()
     data = await state.get_data()
     user_id = data["user_id"]
     user = user_service.get_by_user_id(user_id)
@@ -30,7 +32,7 @@ async def show_therapy_history(query: CallbackQuery, state: FSMContext, user_ser
     if isinstance(query.message, Message):
         if user is not None:
             await query.message.edit_text(format_therapies_history(
-                user=user,
+                user=asdict(user),
                 active_therapy=active_therapy,
                 therapies_history=therapies_history
                 ),

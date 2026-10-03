@@ -8,6 +8,7 @@ from app.keyboards.privacy_policy_keyboard import get_privacy_policy_keyboard
 from app.keyboards.welcome_keyboard import get_welcome_keyboard
 from app.texts.privacy_policy import PRIVACY_POLICY_TEXT
 from container import Services
+from app.handlers.user.progress import progress
 
 WELCOME_TEXT = (
     "🌿 <b>Вітаємо в Elvia</b>\n\n"
@@ -19,6 +20,12 @@ WELCOME_TEXT = (
 
 
 router = Router()
+
+
+@router.message(F.text == "📊 Мій прогрес")
+async def go_to_progress(message: Message, state: FSMContext, services: Services):
+    await state.clear()
+    await progress(message, services)
 
 
 @router.message(CommandStart())
@@ -56,7 +63,7 @@ async def back_to_welcome_message(callback: CallbackQuery):
     await callback.message.edit_text(WELCOME_TEXT, reply_markup=get_welcome_keyboard())
 
 
-@router.message(F.data == "🏠 Головне меню")
+@router.message(F.text == "🏠 Головне меню")
 async def go_to_main_menu(message: Message, state: FSMContext, services: Services):
     await state.clear()
     if message.from_user is None:
