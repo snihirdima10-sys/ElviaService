@@ -59,7 +59,8 @@ class OrderRepository:
                     doses.medication,
                     doses.dose_value,
                     users.full_name,
-                    users.phone AS user_phone
+                    users.phone AS user_phone,
+                    users.tg_id AS user_tg_id
                 FROM orders
                 JOIN doses
                     ON orders.dose_id = doses.id
@@ -161,11 +162,22 @@ class OrderRepository:
                discount: int,
                total_price: float,
                delivery_data: str,
-               status: str
+               status: str,
+               receipt_file_id: str | None = None,
+               receipt_type: str | None = None,
+               receipt_file_name: str | None = None,
+               checkout_token: str | None = None,
     ) -> int:
         connection = get_connection()
         cursor = connection.cursor()
         try:
+            connection.execute('BEGIN IMMEDIATE')
+            if checkout_token:
+                existing = cursor.execute('SELECT id, user_id FROM orders WHERE checkout_token=?', (checkout_token,)).fetchone()
+                if existing:
+                    if existing['user_id'] != user_id:
+                        raise ValueError('Invalid checkout token')
+                    return existing['id']
             cursor.execute("""
                 INSERT INTO orders (
                     user_id,
@@ -174,9 +186,9 @@ class OrderRepository:
                     discount,
                     total_price,
                     delivery_data,
-                    status
+                    status, receipt_file_id, receipt_type, receipt_file_name, checkout_token
                 )
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 user_id,
                 dose_id,
@@ -185,6 +197,7 @@ class OrderRepository:
                 total_price,
                 delivery_data,
                 status,
+                receipt_file_id, receipt_type, receipt_file_name, checkout_token,
 
             ))
 

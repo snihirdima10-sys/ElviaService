@@ -5,7 +5,7 @@ from app.models.order import Order
 from app.models.therapy import Therapy
 from app.models.user import User
 from app.services.order_service import OrderPreview
-from app.utils.formatter import format_weeks
+from app.utils.formatter import format_weeks, format_money
 
 START_UPDATE_WEIGHT_TEXT = (
     "⚖️<b> Час оновити вагу</b>\n\n"
@@ -68,14 +68,14 @@ def format_therapy(active_therapy: Therapy | None, planned_therapy: Therapy | No
             f"Початок терапії: <b>{planned_therapy.start_date.strftime("%d.%m.%Y")}</b>\n"
         )
     else:
-        planned_therapy_text = "У вас немає запланованої терапій"
+        planned_therapy_text = "Наразі у вас немає запланованих змін у терапії."
 
     wrapper = (
         "🌿 <b>Ваша терапія</b>\n\n"
         f"{active_therapy_text}"
-        "<b>\n\nЗапланована терапія</b>\n\n"
+        "\n\n<b>🗓 Запланована терапія</b>\n\n"
         f"{planned_therapy_text}\n\n"
-        f"♻️ <i>Будь-які зміни погоджуйте з лікарем</i>"
+        "♻️ <b>Важливо:</b> <i>будь-які зміни препарату або дозування попередньо погоджуйте з лікарем.</i>"
     )
 
     return wrapper
@@ -85,12 +85,12 @@ def format_therapy_history(user: User, active_therapy: Therapy | None, therapies
         weeks = (date.today() - active_therapy.start_date).days // 7
         active_therapy_text = (
             f"<b>{active_therapy.dose.medication} • {active_therapy.dose.dose_value} мг</b>\n\n"
-            f"Початок: {active_therapy.start_date.strftime("%d.%m.%Y")}\n"
-            f"Тривалість: {format_weeks(weeks)}\n"
-            f"Актуальна вага: {user.current_weight} кг"
+            f"Початок: <b>{active_therapy.start_date.strftime('%d.%m.%Y')}</b>\n"
+            f"Тривалість: <b>{format_weeks(weeks)}</b>\n"
+            f"Актуальна вага: <b>{user.current_weight} кг</b>"
         )
     else:
-        active_therapy_text = "У вас поки немає активниї терапій"
+        active_therapy_text = "У вас поки немає активної терапії"
 
 
     if therapies_history:
@@ -122,12 +122,15 @@ def format_therapy_history(user: User, active_therapy: Therapy | None, therapies
     if stages:
         first_start = min(stage.start_date for stage in stages)
         overall_duration = format_weeks(max(0, (date.today() - first_start).days // 7))
+    start_weight = f"{user.start_weight:.1f}".replace('.', ',')
+    current_weight = f"{user.current_weight:.1f}".replace('.', ',')
+    weight_change = f"{round(user.current_weight - user.start_weight, 1):.1f}".replace('.', ',').replace('-', '−')
     overall_result = (
-        f"Початкова вага: {user.start_weight} кг\n"
-        f"Актуальна вага: {user.current_weight} кг\n"
-        f"Зміна ваги: <b>{round(user.current_weight - user.start_weight, 1)} кг</b>\n"
-        f"Час від початку терапії: {overall_duration}\n\n"
-        "♻️️ <i>Зміна дозування можлива лише після погодження з лікарем</i>"
+        f"<b>{start_weight} кг → {current_weight} кг</b>\n\n"
+        f"Зміна ваги: <b>{weight_change} кг</b>\n"
+        f"Від початку терапії: <b>{overall_duration}</b>\n\n"
+        "━━━━━━━━━━━━━━\n\n"
+        "♻️ <i>Зміна дозування можлива лише після погодження з лікарем</i>"
     )
 
     wrapper = (
@@ -135,10 +138,11 @@ def format_therapy_history(user: User, active_therapy: Therapy | None, therapies
         "Тут зберігаються всі етапи терапії, зміни дозування та динаміка ваги\n\n"
         "✅ <b>Поточний етап</b>\n\n"
         f"{active_therapy_text}\n\n"
-        f"─────────────────────\n\n"
+        "──────────────\n"
         "<b>💉 Історія дозувань</b>\n\n"
         f"{history_therapy_text}\n\n"
-        "\n📊 <b>Загальний результат терапії</b>\n\n"
+        "━━━━━━━━━━━━━━\n\n"
+        "📊 <b>Загальний результат терапії</b>\n\n"
         f"{overall_result}"
     )
     return wrapper
@@ -147,7 +151,7 @@ def format_orders_text(orders: list[Order]) -> str:
     orders_text = "📦 <b>Історія замовлень</b>\n\n"
     status_labels = {
         "new": "Нове",
-        "processed": "Оброблено",
+        "processed": "Оплату підтверджено",
         "completed": "Завершено",
     }
 
@@ -155,9 +159,9 @@ def format_orders_text(orders: list[Order]) -> str:
     for order in orders:
         orders_text += (
             f"🪴<b>Замовлення №{i}</b>\n\n"
-            f"{order.dose.medication} - {order.dose.dose_value} мг\n"
+            f"{escape(order.dose.medication)} - <b>{order.dose.dose_value} мг</b>\n"
             f"Курс: {format_weeks(order.weeks_count)}\n"
-            f"Сума: {order.total_price:.0f} грн\n"
+            f"Сума: {format_money(order.total_price)} грн\n"
             f"Дата: {order.created_at.strftime('%d.%m.%Y')}\n"
             f"Статус: {status_labels.get(order.status, 'Уточнюється')}\n\n"
         )
@@ -174,7 +178,7 @@ def format_order_details(user: User, active_therapy: Therapy, order_preview: Ord
         f"💉 Препарат: <b>{active_therapy.dose.medication}</b>\n"
         f"Дозування: <b>{active_therapy.dose.dose_value} мг</b>\n"
         f"Період: <b>{format_weeks(order_preview.weeks_count)}</b>\n"
-        f"До сплати: <b>{order_preview.total_price:.0f} грн</b>\n\n"
+        f"До сплати: <b>{format_money(order_preview.total_price)} грн</b>\n\n"
         f"👤 Одержувач: <b>{user.full_name}</b>\n"
         f"Телефон: <b>{user.phone}</b>\n\n"
         f"🚚 <b>Доставка</b>\n{escape(order_preview.delivery_data)}\n\n"

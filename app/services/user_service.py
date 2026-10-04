@@ -11,6 +11,9 @@ class UserService:
     def get_by_user_id(self, user_id: int) -> User | None:
         return self.user_repository.get_by_id(user_id)
 
+    def get_users_page(self, page: int, page_size: int = 10) -> tuple[list[dict], int, int]:
+        return self.user_repository.get_page(page, page_size)
+
     def get_user_by_tg_id(self, tg_id: int) -> User | None:
         user_id = self.get_user_id_by_tg_id(tg_id)
         if user_id is None:

@@ -3,7 +3,7 @@ from datetime import datetime
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from app.scheduler.jobs import TIMEZONE, activate_due_therapies, request_weight
+from app.scheduler.jobs import TIMEZONE, activate_due_therapies, request_checkins
 
 
 def create_scheduler(bot: Bot) -> AsyncIOScheduler:
@@ -16,8 +16,8 @@ def create_scheduler(bot: Bot) -> AsyncIOScheduler:
         id="activate_due_therapies", next_run_time=datetime.now(TIMEZONE),
     )
     scheduler.add_job(
-        request_weight, "cron", hour=10, minute=0,
-        id="weekly_weight_reminders", kwargs={"bot": bot},
+        request_checkins, "cron", hour=10, minute=0,
+        id="daily_checkin_reminders", kwargs={"bot": bot},
         next_run_time=datetime.now(TIMEZONE),
     )
     return scheduler

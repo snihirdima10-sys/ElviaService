@@ -1,4 +1,5 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from app.utils.formatter import format_money
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, CopyTextButton
 
 
 def get_therapy_keyboard() -> ReplyKeyboardMarkup:
@@ -43,22 +44,23 @@ def build_select_period_keyboard(dose_price):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=f"1 тиждень — {dose_price:.2f} грн",
+                    text=f"1 тиждень — {format_money(dose_price)} грн",
                     callback_data="period:1",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text=f"2 тиждень — {2 * dose_price * 0.9} грн",
+                    text=f"2 тиждень — {format_money(2 * dose_price * 0.9)} грн",
                     callback_data="period:2"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text=f"4 тиждень — {4 * dose_price * 0.8} грн",
+                    text=f"4 тиждень — {format_money(4 * dose_price * 0.8)} грн",
                     callback_data="period:4"
                 )
-            ]
+            ],
+            [InlineKeyboardButton(text="↩️ Скасувати", callback_data="cancel:order")]
         ])
     return inline_keyboard
 
@@ -96,12 +98,18 @@ def get_show_order_details_keyboard() -> InlineKeyboardMarkup:
             ]
     ])
 
-def get_payment_details_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
+def get_payment_details_keyboard(iban: str = '', recipient: str = '', purpose: str = '') -> InlineKeyboardMarkup:
+    rows = []
+    for label, value in [('📋 Копіювати IBAN', iban), ('📋 Копіювати отримувача', recipient),
+                         ('📋 Копіювати призначення', purpose)]:
+        # Telegram copy buttons accept 1–256 characters. Never truncate banking details.
+        if value and len(value) <= 256:
+            rows.append([InlineKeyboardButton(text=label, copy_text=CopyTextButton(text=value))])
+    rows.extend([
             [InlineKeyboardButton(text="✅ Оплачено", callback_data="confirm_payment")],
             [InlineKeyboardButton(text="↩️ Скасувати", callback_data="cancel:order")]
     ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def get_success_create_order() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
@@ -117,5 +125,6 @@ def get_delivery_methods_keyboard() -> InlineKeyboardMarkup:
             [InlineKeyboardButton(text="Відділення", callback_data="method:branch")],
             [InlineKeyboardButton(text="Поштомат", callback_data="method:parcel_locker")],
             [InlineKeyboardButton(text="Адресна доставка", callback_data="method:courier_delivery")],
+            [InlineKeyboardButton(text="↩️ Скасувати", callback_data="cancel:order")],
         ]
     )

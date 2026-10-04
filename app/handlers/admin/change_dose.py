@@ -1,8 +1,10 @@
 from datetime import date, datetime, timedelta
 from html import escape
 import sqlite3
+import logging
 
-from aiogram import Router, F
+from aiogram import Router, F, Bot
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -13,6 +15,7 @@ from app.states.admin.AdminState import AdminState
 from app.container import Services
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data == "change_dose", AdminState.show_patient)
@@ -93,11 +96,16 @@ async def process_date(message: Message, state: FSMContext, services: Services):
 
 
 @router.callback_query(F.data == "confirm_dose", AdminState.wait_confirm_dose_change)
-async def confirm_dose(query: CallbackQuery, state: FSMContext, services: Services):
+async def confirm_dose(query: CallbackQuery, state: FSMContext, services: Services, bot: Bot):
     await query.answer()
     if not isinstance(query.message, Message):
         return
     data = await state.get_data()
+    user = services.user.get_by_user_id(data["user_id"])
+    dose = services.dose.get_dose_by_dose_id(data["next_dose_id"])
+    if user is None or dose is None:
+        await query.message.answer("Пацієнта або дозування не знайдено. Поверніться до /admin.")
+        return
     try:
         services.therapy.create_therapy(data["user_id"], data["next_dose_id"], date.fromisoformat(data["start_date"]))
     except ValueError as error:
@@ -107,7 +115,21 @@ async def confirm_dose(query: CallbackQuery, state: FSMContext, services: Servic
         await query.message.answer("Не вдалося зберегти призначення. Спробуйте ще раз.")
         return
     await state.set_state(AdminState.confirmed_dose)
-    await query.message.edit_text("✅ Призначення збережено", reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+    notification_status = "Пацієнту надіслано повідомлення."
+    try:
+        await bot.send_message(
+            chat_id=user.tg_id,
+            text=("💉 <b>Нове призначення від лікаря</b>\n\n"
+                  f"Препарат: <b>{escape(dose.medication)}</b>\n"
+                  f"Дозування: <b>{dose.dose_value:g} мг</b>\n"
+                  f"Дата початку: <b>{date.fromisoformat(data['start_date']).strftime('%d.%m.%Y')}</b>\n\n"
+                  "Деталі доступні в розділі «🌿 Моя терапія»"),
+            parse_mode="HTML",
+        )
+    except TelegramAPIError:
+        logger.exception("Could not deliver prescription notification to user %s", user.id)
+        notification_status = "⚠️ Не вдалося повідомити пацієнта. Призначення збережено; зв’яжіться з пацієнтом окремо."
+    await query.message.edit_text("✅ Призначення збережено\n\n" + notification_status, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Карта пацієнта", callback_data="card_of_patient")],
         [InlineKeyboardButton(text="Панель лікаря", callback_data="admin_main_menu")],
     ]))

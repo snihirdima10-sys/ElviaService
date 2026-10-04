@@ -5,6 +5,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 def get_user_cart_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
+            [InlineKeyboardButton(text="📋 Результати check-in", callback_data="checkins:page:0")],
             [InlineKeyboardButton(text="Змінити дозування", callback_data="change_dose")],
             [InlineKeyboardButton(text="Історія терапії", callback_data="therapy_history")],
             [InlineKeyboardButton(text="Головне меню", callback_data="admin_main_menu")],

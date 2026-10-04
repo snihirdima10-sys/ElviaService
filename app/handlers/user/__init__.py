@@ -1,4 +1,6 @@
 from aiogram import Router
+from app.handlers.user.checkin import router as checkin_router
+from app.handlers.user.profile import router as profile_router
 
 from app.handlers.user.start import router as start_router
 from app.handlers.user.registration import router as registration_router
@@ -17,6 +19,8 @@ from app.handlers.user.useful_info import router as useful_info_router
 router = Router()
 
 router.include_router(start_router)
+router.include_router(profile_router)
+router.include_router(checkin_router)
 router.include_router(registration_router)
 
 router.include_router(therapy_router)

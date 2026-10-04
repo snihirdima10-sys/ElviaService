@@ -1,3 +1,10 @@
+import logging
+import sqlite3
+from uuid import uuid4
+from html import escape
+
+from config import PAYMENT_IBAN, PAYMENT_RECIPIENT, PAYMENT_PURPOSE, PAYMENT_TEST_MODE
+
 from aiogram import Router, F, Bot
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
@@ -10,7 +17,7 @@ from app.keyboards.user import get_show_order_details_keyboard, build_select_per
     get_cancel_order_keyboard, get_delivery_methods_keyboard, get_payment_details_keyboard, get_success_create_order
 from app.services.order_service import OrderCreateData
 from app.texts.user import format_order_details
-from app.utils.formatter import format_weeks
+from app.utils.formatter import format_weeks, format_money
 from app.utils.validators import is_valid_city, is_valid_delivery_address
 
 
@@ -46,6 +53,7 @@ async def show_order_details(message: Message, state: FSMContext, services: Serv
 
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.message(StateFilter(None), F.text == "🛒 Зробити замовлення")
@@ -62,9 +70,11 @@ async def show_periods(message: Message, state: FSMContext, services: Services) 
 
     if active_dose is None:
         await message.answer(
-            "⚠️ Активне призначення не знайдено.\n\n"
-            "Для оформлення замовлення необхідне актуальне "
-            "дозування від лікаря.Будь ласка, зверніться до лікаря."
+            "🌿 <b>Потрібно уточнити призначення</b>\n\n"
+            "Наразі в системі немає актуального дозування для оформлення замовлення.\n\n"
+            "Будь ласка, зв’яжіться з лікарем — він допоможе уточнити вашу терапію та, за потреби, оновить призначення.\n\n"
+            "Після цього оформлення замовлення буде доступне 🤍",
+            parse_mode="HTML", reply_markup=get_main_menu_keyboard(),
         )
         return
 
@@ -104,14 +114,19 @@ async def show_order_terms(query: CallbackQuery, state: FSMContext, services: Se
     )
 
     text = (
-        "📦 Умови оформлення:\n\n"
-        "Ваше замовлення:\n\n"
-        f"Препарат — <b>{active_dose.medication} {active_dose.dose_value} мг</b>\n"
+        "📦 <b>Умови оформлення</b>\n\n"
+        "<b>Ваше замовлення:</b>\n\n"
+        f"Препарат — <b>{escape(active_dose.medication)} {str(active_dose.dose_value).replace('.', ',')} мг</b>\n"
         f"Тривалість — <b>{format_weeks(weeks_count)}</b>\n"
-        f"До сплати — <b>{total_price} грн</b>\n\n"
+        f"До сплати — <b>{format_money(total_price)} грн</b>\n\n"
+        "💳 <b>Оплата замовлення</b>\n\n"
+        "Для оформлення та підготовки замовлення передбачена <b>повна оплата перед відправленням</b>.\n\n"
+        "🚚 <b>Доставка</b>\n\n"
         "Доставка здійснюється Новою поштою по Україні. Вартість доставки оплачує отримувач відповідно до тарифів перевізника.\n\n"
-        "Після підтвердження оплати очікуйте повідомлення щодо оформлення та відправлення замовлення протягом 24 годин у застосунку Нова пошта 🙌🏻\n\n"
-        "<i>Зверніть увагу: через воєнну ситуацію в країні строки доставки можуть бути збільшені на 1–3 дні. Дякуємо за ваше розуміння 🪴</i>"
+        "Після підтвердження оплати очікуйте повідомлення про оформлення та відправлення замовлення протягом <b>24 годин</b> у застосунку Нова пошта 🙌🏻\n\n"
+        "🛡 <b>Турбота про ваше замовлення</b>\n\n"
+        "Якщо через обставини воєнного часу посилка буде втрачена під час доставки, ми подбаємо про повторне відправлення вашого замовлення <b>без додаткової оплати з вашого боку</b>.\n\n"
+        "Зверніть увагу: <i>через воєнну ситуацію строки доставки можуть бути збільшені на <b>1–3 дні</b>. Дякуємо за розуміння 🪴</i>"
     )
     if not isinstance(query.message, Message):
         return
@@ -120,7 +135,7 @@ async def show_order_terms(query: CallbackQuery, state: FSMContext, services: Se
         weeks_count=weeks_count,
     )
     await state.set_state(CreateOrderState.wait_for_terms_confirmation)
-    await query.message.edit_text(text, reply_markup=get_order_terms_keyboard())
+    await query.message.edit_text(text, reply_markup=get_order_terms_keyboard(), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "accept_order_terms", CreateOrderState.wait_for_terms_confirmation)
@@ -186,13 +201,13 @@ async def request_address(query: CallbackQuery, state: FSMContext) -> None:
 
     match method:
         case "branch":
-            await query.message.edit_text("Введіть номер відділення")
+            await query.message.edit_text("Введіть номер відділення", reply_markup=get_cancel_order_keyboard())
 
         case "parcel_locker":
-            await query.message.edit_text("Введіть номер поштомату")
+            await query.message.edit_text("Введіть номер поштомату", reply_markup=get_cancel_order_keyboard())
 
         case "courier_delivery":
-            await query.message.edit_text("Введіть адрес доставки")
+            await query.message.edit_text("Введіть адресу доставки", reply_markup=get_cancel_order_keyboard())
 
         case _:
             return
@@ -241,33 +256,77 @@ async def show_payment_details(query: CallbackQuery, state: FSMContext, services
         discount=services.order.calculate_discount(weeks_count),
     )
 
-    await state.update_data(total_price=total_price)
+    await state.update_data(total_price=total_price, checkout_token=uuid4().hex)
 
     text = (
         "💳 <b>Оплата замовлення</b>\n\n"
-        "Ваше замовлення:\n\n"
-        f"💉{active_dose.medication} — {active_dose.dose_value} мг\n"
-        f"📅Період: {format_weeks(order_data["weeks_count"])}\n"
-        f"💳<b>До сплати: {total_price:.0f} грн</b>\n\n"
-        "<b>Реквізити для оплати</b>\n\n"
-        "Отримувач: [ПІБ / назва]\n"
-        "IBAN: [номер рахунку]\n"
-        "Призначення платежу: <b>Замовлення №1042</b>\n\n"
-        "Після здійснення оплати натисніть <b>«Оплачено»</b>\n\n"
-        "Дякуємо за ваше замовлення 🙌🏻🌿"
+        "<b>Ваше замовлення</b>\n\n"
+        f"💉 Препарат: {escape(active_dose.medication)} — {str(active_dose.dose_value).replace('.', ',')} мг\n"
+        f"📅 Період: {format_weeks(order_data['weeks_count'])}\n"
+        f"💳 До сплати: <b>{format_money(total_price)} грн</b>\n\n"
+        "━━━━━━━━━━━━━━\n\n"
+        "🏦 <b>Реквізити для оплати</b>\n\n"
+        f"<b>Отримувач:</b>\n{escape(PAYMENT_RECIPIENT or '[ПІБ / назва]')}\n\n"
+        f"<b>IBAN:</b>\n{escape(PAYMENT_IBAN or '[номер рахунку]')}\n\n"
+        f"<b>Призначення платежу:</b>\n{escape(PAYMENT_PURPOSE)}\n\n"
+        "Скопіюйте необхідні реквізити за допомогою кнопок нижче.\n\n"
+        "━━━━━━━━━━━━━━\n\n"
+        "✨ <b>Після оплати</b>\n\n"
+        "Натисніть <b>«Оплачено»</b> та надішліть квитанцію у форматі PDF або скріншот.\n\n"
+        "<i>Після перевірки платежу ви отримаєте повідомлення в боті про підтвердження оплати.</i>\n\n"
+        "Дякуємо, що обираєте <b>Elvia</b> 🌿"
     )
 
     await state.set_state(CreateOrderState.wait_for_payment)
-    await query.message.edit_text(text, reply_markup=get_payment_details_keyboard())
+    if PAYMENT_TEST_MODE:
+        text = '🧪 <b>Тестовий режим — не здійснюйте оплату.</b>\nРеквізити вигадані та непридатні для переказу.\n\n' + text
+    await query.message.edit_text(text, parse_mode="HTML", reply_markup=get_payment_details_keyboard(
+        iban=PAYMENT_IBAN, recipient=PAYMENT_RECIPIENT, purpose=PAYMENT_PURPOSE,
+    ))
 
 
 @router.callback_query(F.data == "confirm_payment", CreateOrderState.wait_for_payment)
-async def create_order(query: CallbackQuery, state: FSMContext, services: Services):
+async def request_payment_receipt(query: CallbackQuery, state: FSMContext):
     await query.answer()
     if not isinstance(query.message, Message):
         return
 
+    await state.set_state(CreateOrderState.wait_for_payment_receipt)
+    await query.message.edit_text(
+        '📎 <b>Підтвердження оплати</b>\n\nНадішліть квитанцію у форматі PDF або скріншот оплати (фото чи файл JPG/PNG/WEBP).\n\n'
+        'Замовлення буде оформлено після завантаження підтвердження.',
+        reply_markup=get_cancel_order_keyboard(),
+    )
+
+
+@router.message(CreateOrderState.wait_for_payment_receipt)
+async def receive_payment_receipt(message: Message, state: FSMContext, services: Services):
+    if not message.from_user:
+        return
+    file_name = None
+    if message.photo:
+        file_id, receipt_type = message.photo[-1].file_id, 'photo'
+    elif message.document:
+        document = message.document
+        file_name = document.file_name
+        allowed = {'application/pdf': ('.pdf',), 'image/jpeg': ('.jpg', '.jpeg'),
+                   'image/png': ('.png',), 'image/webp': ('.webp',)}
+        extensions = allowed.get(document.mime_type, ())
+        if not extensions or (file_name and not file_name.lower().endswith(extensions)):
+            await message.answer('Надішліть квитанцію PDF або скріншот у форматі JPG, PNG чи WEBP.')
+            return
+        file_id, receipt_type = document.file_id, 'document'
+    else:
+        await message.answer('Потрібен файл PDF або скріншот оплати. Текстове повідомлення не є підтвердженням.')
+        return
     data = await state.get_data()
+    user_id = services.user.get_user_id_by_tg_id(message.from_user.id)
+    if user_id is None or user_id != data.get('user_id'):
+        await message.answer('Не вдалося визначити ваше замовлення. Відкрийте головне меню через /start.')
+        return
+    if not data.get('checkout_token'):
+        data['checkout_token'] = uuid4().hex
+        await state.update_data(checkout_token=data['checkout_token'])
 
     order_data = OrderCreateData(
         user_id=data["user_id"],
@@ -275,20 +334,31 @@ async def create_order(query: CallbackQuery, state: FSMContext, services: Servic
         weeks_count=data["weeks_count"],
         city=data["city"],
         delivery_method=data["delivery_method"],
-        address=data["address"]
+        address=data["address"],
+        receipt_file_id=file_id,
+        receipt_type=receipt_type,
+        receipt_file_name=file_name,
+        checkout_token=data['checkout_token'],
     )
 
-    order_id = services.order.create_order(order_data)
-    await state.clear()
+    try:
+        order_id = services.order.create_order(order_data)
+    except (sqlite3.Error, ValueError):
+        logger.exception('Could not save order receipt for user %s', user_id)
+        await message.answer('Не вдалося зберегти замовлення. Надішліть квитанцію ще раз.')
+        return
     if order_id:
-        await query.message.edit_text("✅ Замовлення успішно оформлено")
-        await query.message.answer(
-            "📦 <b>Замовлення прийнято</b>\n\n"
-            "Ваше замовлення успішно передано адміністратору та найближчим часом буде оброблено.\n\n"
-            "Дякуємо, що обираєте Elvia 🤍", reply_markup=get_success_create_order()
+        await message.answer(
+            f"📦 <b>Замовлення №{order_id} прийнято</b>\n\n"
+            "Дякуємо! Ми отримали ваше замовлення та квитанцію про оплату.\n\n"
+            "🔎 <b>Оплата очікує підтвердження</b>\n\n"
+            "Наша команда перевірить платіж найближчим часом. Щойно оплату буде підтверджено, ви отримаєте <b>повідомлення в боті</b>.\n\n"
+            "Після підтвердження ми розпочнемо підготовку вашого замовлення до відправлення.\n\n"
+            "Дякуємо, що обираєте <b>Elvia</b> 🌿", reply_markup=get_success_create_order()
         )
+        await state.clear()
     else:
-        await query.message.edit_text("Щось пішло не так")
+        await message.answer("Не вдалося оформити замовлення. Надішліть квитанцію ще раз.")
 
 
 @router.callback_query(F.data == "cancel:order", StateFilter(CreateOrderState))

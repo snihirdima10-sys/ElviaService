@@ -7,6 +7,18 @@ from app.models.dose import Dose
 # noinspection PyMethodMayBeStatic
 # noinspection PyRedeclaration
 class DoseRepository:
+    def create(self, medication: str, dose_value: float, price: int) -> int:
+        connection = get_connection()
+        try:
+            with connection:
+                cursor = connection.execute(
+                    "INSERT INTO doses (medication, dose_value, price) VALUES (?, ?, ?)",
+                    (medication, dose_value, price),
+                )
+                return cursor.lastrowid
+        finally:
+            connection.close()
+
     def get_by_id(self, dose_id: int) -> Dose | None:
         connection = get_connection()
         cursor = connection.cursor()

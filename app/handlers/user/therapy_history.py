@@ -28,5 +28,5 @@ async def therapy_history(message: Message, services: Services):
             user=user,
             active_therapy=active_therapy,
             therapies_history=therapies_history,
-        ), reply_markup=get_therapy_history_keyboard()
+        ), reply_markup=get_therapy_history_keyboard(), parse_mode="HTML"
     )

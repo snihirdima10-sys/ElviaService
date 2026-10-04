@@ -2,6 +2,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.fsm.storage.memory import SimpleEventIsolation
 
 
 from config import BOT_TOKEN
@@ -76,7 +77,7 @@ async def main():
     )
 
     # dp = Dispatcher(storage=storage)
-    dp = Dispatcher()
+    dp = Dispatcher(events_isolation=SimpleEventIsolation())
 
     dp["services"] = services
     dp["user_service"] = user_service
@@ -86,7 +87,7 @@ async def main():
 
     dp.include_router(admin_router)
     dp.include_router(user_router)
-
+    
     init_db()
 
     scheduler = create_scheduler(bot)

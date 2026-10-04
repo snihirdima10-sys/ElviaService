@@ -1,15 +1,16 @@
 from html import escape
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from app.states.admin.AdminState import AdminState
 from app.container import Services
-from app.utils.formatter import format_weeks
+from app.utils.formatter import format_weeks, format_money
 
 router = Router()
-STATUS_LABELS = {"new": "Нове", "processed": "Оброблено", "completed": "Завершено"}
+STATUS_LABELS = {"new": "Нове", "processed": "Оплату підтверджено", "completed": "Завершено"}
 PAGE_SIZE = 10
 
 
@@ -76,13 +77,15 @@ async def show_order(query: CallbackQuery, order: dict):
     rows = [[InlineKeyboardButton(text=f"Змінити на: {label}",
               callback_data=f"admin_order_status:{order['id']}:{status}")]
             for status, label in STATUS_LABELS.items() if status != order["status"]]
+    if order.get('receipt_file_id'):
+        rows.append([InlineKeyboardButton(text="📎 Квитанція оплати", callback_data=f"admin_receipt:{order['id']}")])
     rows.append([InlineKeyboardButton(text="⬅️ До списку", callback_data="admin_orders_back")])
     text = (
         f"📦 <b>Замовлення №{order['id']}</b>\n\n"
         f"Статус: <b>{STATUS_LABELS[order['status']]}</b>\n"
         f"Препарат: {escape(order['medication'])} · {order['dose_value']} мг\n"
         f"Період: {format_weeks(order['weeks_count'])}\n"
-        f"Сума: {order['total_price']:.2f} грн\n"
+        f"Сума: {format_money(order['total_price'])} грн\n"
         f"Дата: {escape(order['created_at'])}\n\n"
         f"Одержувач: {escape(order['full_name'])}\n"
         f"Телефон: {escape(order['user_phone'])}\n"
@@ -90,6 +93,27 @@ async def show_order(query: CallbackQuery, order: dict):
     )
     if isinstance(query.message, Message):
         await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+
+
+@router.callback_query(F.data.startswith('admin_receipt:'), AdminState.show_category_orders)
+async def show_receipt(query: CallbackQuery, services: Services):
+    if not isinstance(query.message, Message):
+        await query.answer()
+        return
+    value = query.data.split(':', 1)[1]
+    order = services.order.get_admin_order(int(value)) if value.isdigit() else None
+    if not order or not order.get('receipt_file_id'):
+        await query.answer('Квитанцію не знайдено.', show_alert=True)
+        return
+    await query.answer()
+    caption = f"📎 Підтвердження оплати замовлення №{order['id']}"
+    try:
+        if order['receipt_type'] == 'photo':
+            await query.message.answer_photo(order['receipt_file_id'], caption=caption)
+        else:
+            await query.message.answer_document(order['receipt_file_id'], caption=caption)
+    except TelegramAPIError:
+        await query.message.answer('Не вдалося завантажити квитанцію. Спробуйте ще раз пізніше.')
 
 
 @router.callback_query(F.data.startswith("admin_order:"), AdminState.show_category_orders)
@@ -109,7 +133,7 @@ async def back_to_orders(query: CallbackQuery, state: FSMContext, services: Serv
 
 
 @router.callback_query(F.data.startswith("admin_order_status:"), AdminState.show_category_orders)
-async def change_order_status(query: CallbackQuery, services: Services):
+async def change_order_status(query: CallbackQuery, services: Services, bot: Bot):
     _, order_id, status = query.data.split(":")
     if status not in STATUS_LABELS:
         await query.answer("Некоректний статус", show_alert=True)
@@ -126,4 +150,23 @@ async def change_order_status(query: CallbackQuery, services: Services):
         return
     await query.answer("Статус змінено")
     order["status"] = status
+    if status == "processed":
+        try:
+            await bot.send_message(
+                chat_id=order["user_tg_id"],
+                text=(
+                    f"✅ <b>Оплату замовлення №{order['id']} підтверджено</b>\n\n"
+                    "Дякуємо! Ми підтвердили вашу оплату.\n\n"
+                    "📦 <b>Ваше замовлення в обробці</b>\n\n"
+                    "Ми готуємо його до відправлення. Очікуйте повідомлення про оформлення та відправлення замовлення "
+                    "протягом <b>24 годин</b> у застосунку Нова пошта 🙌🏻\n\n"
+                    "Дякуємо, що обираєте <b>Elvia</b> 🌿"
+                ),
+                parse_mode="HTML",
+            )
+        except TelegramAPIError:
+            if isinstance(query.message, Message):
+                await query.message.answer(
+                    "Оплату підтверджено, але повідомлення клієнту не доставлено. Зв’яжіться з ним окремо."
+                )
     await show_order(query, order)

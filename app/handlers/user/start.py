@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
@@ -64,8 +64,24 @@ async def back_to_welcome_message(callback: CallbackQuery):
 
 
 @router.message(F.text == "🏠 Головне меню")
+@router.message(Command("menu", "cancel"))
 async def go_to_main_menu(message: Message, state: FSMContext, services: Services):
     await state.clear()
     if message.from_user is None:
         return
+    if services.user.get_user_id_by_tg_id(message.from_user.id) is None:
+        await message.answer(WELCOME_TEXT, reply_markup=get_welcome_keyboard())
+        return
     await message.answer("Головне меню:", reply_markup=get_main_menu_keyboard())
+
+
+@router.callback_query(F.data == "user_main_menu")
+async def main_menu_callback(callback: CallbackQuery, state: FSMContext, services: Services):
+    await callback.answer()
+    await state.clear()
+    if not isinstance(callback.message, Message):
+        return
+    if services.user.get_user_id_by_tg_id(callback.from_user.id) is None:
+        await callback.message.answer(WELCOME_TEXT, reply_markup=get_welcome_keyboard())
+        return
+    await callback.message.answer("Головне меню:", reply_markup=get_main_menu_keyboard())

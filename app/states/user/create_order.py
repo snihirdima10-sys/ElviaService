@@ -10,3 +10,4 @@ class CreateOrderState(StatesGroup):
     wait_for_delivery_data = State()
     wait_for_order_confirmation = State()
     wait_for_payment = State()
+    wait_for_payment_receipt = State()

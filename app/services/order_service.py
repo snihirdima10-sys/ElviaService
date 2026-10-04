@@ -13,6 +13,10 @@ class OrderCreateData:
     city: str
     delivery_method: str
     address: str
+    receipt_file_id: str
+    receipt_type: str
+    receipt_file_name: str | None
+    checkout_token: str
 
 
 @dataclass(slots=True)
@@ -57,6 +61,8 @@ class OrderService:
         return subtotal * (1 - discount / 100)
 
     def create_order(self, data: OrderCreateData) -> int:
+        if not data.receipt_file_id or data.receipt_type not in {'photo', 'document'} or not data.checkout_token:
+            raise ValueError('Додайте квитанцію PDF або скріншот оплати.')
         dose = self.dose_repository.get_by_id(data.dose_id)
 
         if dose is None:
@@ -84,6 +90,10 @@ class OrderService:
             total_price=total_price,
             delivery_data=delivery_data,
             status="new",
+            receipt_file_id=data.receipt_file_id,
+            receipt_type=data.receipt_type,
+            receipt_file_name=data.receipt_file_name,
+            checkout_token=data.checkout_token,
         )
 
     def build_delivery_data(self, city: str, method: str, address: str) -> str:

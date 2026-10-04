@@ -4,7 +4,6 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from aiogram import Bot
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.database.connection import get_connection
 
@@ -47,38 +46,36 @@ async def activate_due_therapies(today: date | None = None) -> int:
     return len(planned)
 
 
-async def request_weight(bot: Bot, today: date | None = None) -> int:
-    """Advance each reminder date only after successful delivery."""
+async def request_checkins(bot: Bot, today: date | None = None) -> int:
+    """Send due invitations daily until completion; only successful sends count."""
+    from app.services.checkin_service import CheckinService
+    from app.handlers.user.checkin import INTRO, intro_keyboard
+
     today = today or local_today()
+    service = CheckinService(get_connection)
     with closing(get_connection()) as connection:
         users = connection.execute(
-            """SELECT id, tg_id FROM users
-               WHERE date(COALESCE(next_weight_request_at,
-                   datetime(created_at, '+7 days'))) <= date(?)""",
-            (today.isoformat(),),
+            """SELECT u.id, u.tg_id FROM users u
+               LEFT JOIN weekly_checkins c ON c.user_id=u.id AND c.status='draft'
+               WHERE (c.id IS NOT NULL OR date(COALESCE(u.next_checkin_at,
+                   datetime(u.created_at, '+7 days'))) <= date(?))
+               AND (c.last_reminded_on IS NULL OR date(c.last_reminded_on) < date(?))""",
+            (today.isoformat(), today.isoformat()),
         ).fetchall()
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="⚖️ Оновити вагу", callback_data="update_weight")
-    ]])
     sent = 0
     for user in users:
-        try:
-            await bot.send_message(
-                user["tg_id"],
-                "⏰ Час оновити вагу\n\n"
-                "Зважтеся вранці натщесерце та внесіть актуальний показник у бот.",
-                reply_markup=keyboard,
-            )
-        except Exception:
-            logger.exception("Failed to send weight reminder to user %s", user["id"])
+        draft = service.begin(user['id'], today, from_reminder=True)
+        if draft is None:
             continue
-        next_date = (today + timedelta(days=7)).isoformat()
+        try:
+            await bot.send_message(user['tg_id'], INTRO, reply_markup=intro_keyboard())
+        except Exception:
+            logger.exception('Failed to send check-in reminder to user %s', user['id'])
+            continue
         with closing(get_connection()) as connection, connection:
             connection.execute(
-                """UPDATE users SET next_weight_request_at = ?
-                   WHERE id = ? AND (next_weight_request_at IS NULL
-                       OR date(next_weight_request_at) < date(?))""",
-                (next_date, user["id"], next_date),
+                "UPDATE weekly_checkins SET last_reminded_on=? WHERE id=? AND status='draft'",
+                (today.isoformat(), draft['id']),
             )
         sent += 1
     return sent

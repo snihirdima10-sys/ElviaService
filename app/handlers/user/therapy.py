@@ -27,4 +27,4 @@ async def show_therapy(message: Message, services :Services):
         planned_therapy = planned_therapy
     )
 
-    await message.answer(text, reply_markup=get_therapy_keyboard())
+    await message.answer(text, reply_markup=get_therapy_keyboard(), parse_mode="HTML")

@@ -11,6 +11,19 @@ from app.models.user import User
 
 class UserRepository:
 
+    def get_page(self, page: int, page_size: int = 10) -> tuple[list[dict], int, int]:
+        connection = get_connection()
+        try:
+            total = connection.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            page = min(max(0, page), max(0, (total - 1) // page_size))
+            rows = connection.execute(
+                "SELECT id, full_name, phone FROM users ORDER BY full_name, id LIMIT ? OFFSET ?",
+                (page_size, page * page_size),
+            ).fetchall()
+            return [dict(row) for row in rows], total, page
+        finally:
+            connection.close()
+
     def get_by_id(self, user_id: int) -> User | None:
         connection = get_connection()
         cursor = connection.cursor()

@@ -1,6 +1,6 @@
 from dataclasses import asdict, is_dataclass
 from aiogram import F, Router
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 
 from app.handlers.admin.panel import get_admin_main_menu_keyboard
@@ -60,6 +60,11 @@ async def show_user_card(event: Message | CallbackQuery, user: dict, state: FSMC
     )
 
     keyboard = get_user_cart_keyboard()
+    data = await state.get_data()
+    if "users_page" in data:
+        keyboard.inline_keyboard.insert(-1, [InlineKeyboardButton(
+            text="⬅️ До списку користувачів", callback_data=f"admin_users:{data['users_page']}"
+        )])
 
     await state.set_state(AdminState.show_patient)
     await state.update_data(user_id=user_id)

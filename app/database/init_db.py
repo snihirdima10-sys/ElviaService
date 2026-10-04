@@ -98,6 +98,22 @@ def init_db() -> None:
                     ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS weekly_checkins (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'completed')),
+                step TEXT NOT NULL DEFAULT 'weight',
+                revision INTEGER NOT NULL DEFAULT 0,
+                answers TEXT NOT NULL DEFAULT '{}',
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                completed_at DATETIME,
+                last_reminded_on DATE
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS one_draft_checkin_per_user
+                ON weekly_checkins(user_id) WHERE status = 'draft';
+            CREATE INDEX IF NOT EXISTS idx_checkins_user_date
+                ON weekly_checkins(user_id, completed_at);
+
 
             CREATE TABLE IF NOT EXISTS orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -155,6 +171,15 @@ def init_db() -> None:
             """
         )
 
+        columns = {row['name'] for row in cursor.execute('PRAGMA table_info(users)')}
+        if 'next_checkin_at' not in columns:
+            cursor.execute('ALTER TABLE users ADD COLUMN next_checkin_at DATE')
+            cursor.execute("UPDATE users SET next_checkin_at = COALESCE(next_weight_request_at, date(created_at, '+7 days'))")
+        order_columns = {row['name'] for row in cursor.execute('PRAGMA table_info(orders)')}
+        for name in ('receipt_file_id', 'receipt_type', 'receipt_file_name', 'checkout_token'):
+            if name not in order_columns:
+                cursor.execute(f'ALTER TABLE orders ADD COLUMN {name} TEXT')
+        cursor.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_checkout_token ON orders(checkout_token)')
         connection.commit()
 
     except sqlite3.Error:
