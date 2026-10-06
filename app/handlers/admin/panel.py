@@ -12,7 +12,7 @@ def get_admin_main_menu_keyboard():
         keyboard=[
             [KeyboardButton(text="🔍 Знайти пацієнта")],
             [KeyboardButton(text="👥 Усі користувачі")],
-            [KeyboardButton(text="➕ Створити дозування")],
+            [KeyboardButton(text="💉 Дозування")],
             [KeyboardButton(text="📦 Замовлення")]
         ], resize_keyboard=True
     )

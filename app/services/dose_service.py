@@ -11,6 +11,12 @@ class DoseService:
     def get_all_doses(self):
         return self.dose.get_all()
 
+    def delete_dose(self, dose_id: int) -> bool:
+        return self.dose.deactivate(dose_id)
+
+    def get_active_dose(self, dose_id: int) -> Dose | None:
+        return self.dose.get_active_by_id(dose_id)
+
     def create_dose(self, medication: str, dose_value: float, price: int) -> int:
         medication = medication.strip()
         if not 1 <= len(medication) <= 100:

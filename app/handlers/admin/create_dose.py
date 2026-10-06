@@ -8,8 +8,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from app.container import Services
-from app.handlers.admin.panel import get_admin_main_menu_keyboard
-from app.states.admin.AdminState import AdminState
+from app.handlers.admin.delete_dose import show_doses
 from app.utils.formatter import format_money
 
 router = Router()
@@ -26,15 +25,18 @@ def keyboard(confirm=False):
     rows = []
     if confirm:
         rows.append([InlineKeyboardButton(text="✅ Створити", callback_data="create_dose:confirm")])
-    rows.append([InlineKeyboardButton(text="↩️ Скасувати", callback_data="admin_main_menu")])
+    rows.append([InlineKeyboardButton(text="↩️ До дозувань", callback_data="delete_dose:page:0")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-@router.message(F.text == "➕ Створити дозування")
-async def start_create_dose(message: Message, state: FSMContext):
+@router.callback_query(F.data == "create_dose:start")
+async def start_create_dose(query: CallbackQuery, state: FSMContext):
+    await query.answer()
+    if not isinstance(query.message, Message):
+        return
     await state.clear()
     await state.set_state(CreateDoseState.medication)
-    await message.answer("💉 <b>Нове дозування</b>\n\nВведіть назву препарату, наприклад: Mounjaro.",
+    await query.message.edit_text("💉 <b>Нове дозування</b>\n\nВведіть назву препарату, наприклад: Mounjaro.",
                          parse_mode="HTML", reply_markup=keyboard())
 
 
@@ -100,8 +102,5 @@ async def confirm_create_dose(query: CallbackQuery, state: FSMContext, services:
     except sqlite3.Error:
         await query.answer("Не вдалося зберегти. Спробуйте ще раз.", show_alert=True)
         return
-    await state.clear()
-    await state.set_state(AdminState.show_admin_panel)
     await query.answer("Дозування створено")
-    await query.message.edit_text("✅ <b>Дозування створено</b>\n\nВоно вже доступне для призначення пацієнтам.", parse_mode="HTML")
-    await query.message.answer("👨‍⚕️ Панель лікаря", reply_markup=get_admin_main_menu_keyboard())
+    await show_doses(query, state, services, notice="✅ Дозування створено.\n\n")

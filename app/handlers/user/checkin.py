@@ -19,7 +19,7 @@ MENU = CHECKIN_TEST_MENU
 INTRO = (
     '🌿 <b>Щотижневий check-in</b>\n\n'
     'Час приділити кілька хвилин вашому прогресу та самопочуттю.\n\n'
-    'Check-in займе лише <b>1–2 хвилини</b> та допоможе нам краще відстежувати динаміку терапії й ваші зміни протягом тижня.\n\n'
+    'Check-in займе лише <b>1–2 хвилини</b> та допоможе нам краще відстежувати динаміку терапії й ваші зміни протягом тижня\n\n'
     '<b>Почнемо?</b>'
 )
 COMPLETED = (
@@ -227,7 +227,7 @@ async def action(query: CallbackQuery, state: FSMContext, services: Services):
             await query.answer()
             await query.message.edit_text(
                 '✅ <b>Check-in завершено</b>\n\nДякуємо! Ваші дані за цей тиждень збережено 🤍\n\n'
-                + summary(a) + '\n\nНаступний check-in буде доступний через 7 днів. 🌿',
+                + summary(a) + '\n\nНаступний check-in буде доступний через 7 днів 🌿',
                 parse_mode="HTML",
             )
             await query.message.answer('Головне меню:', reply_markup=get_main_menu_keyboard())

@@ -35,7 +35,7 @@ class TherapyService:
         user = self.user.get_by_id(user_id)
         if user is None:
             raise ValueError("Пацієнта не знайдено")
-        dose = self.dose.get_by_id(dose_id)
+        dose = self.dose.get_active_by_id(dose_id)
         if dose is None:
             raise ValueError("Дозування не знайдено")
         if start_date < date.today():
