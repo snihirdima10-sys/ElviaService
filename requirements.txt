@@ -4,6 +4,7 @@ aiogram==3.31.0
 APScheduler==3.11.3
 pillow==12.3.0
 python-dotenv==1.2.3
+redis==8.1.0
 tzdata==2026.4
 
 # Pinned transitive dependencies for reproducible installation.

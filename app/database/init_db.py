@@ -1,7 +1,5 @@
 import sqlite3
-from config import BASE_DIR
-
-DB_PATH = BASE_DIR / "data" / "db.db"
+from config import DB_PATH
 
 
 def get_connection() -> sqlite3.Connection:
@@ -12,6 +10,7 @@ def get_connection() -> sqlite3.Connection:
 
 
 def init_db() -> None:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     connection = get_connection()
     cursor = connection.cursor()
 

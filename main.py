@@ -1,4 +1,6 @@
 import asyncio
+import os
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -25,10 +27,11 @@ from app.database.repositories.order_repository import OrderRepository
 from app.database.repositories.weight_repository import WeightRepository
 from app.services.order_service import OrderService
 from app.services.weight_service import WeightService
+from config import ENV
 
 
-# from redis.asyncio import Redis
-# from aiogram.fsm.storage.redis import RedisStorage
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.redis import RedisStorage
 
 async def main():
 
@@ -36,8 +39,15 @@ async def main():
         token=BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
-    # redis = Redis.from_url("redis://127.0.0.1:6379/0")
-    # storage = RedisStorage(redis=redis)
+
+    if ENV == "production":
+        storage = RedisStorage.from_url(
+            os.getenv("REDIS_URL", "redis://redis:6379/0")
+        )
+    else:
+        storage = MemoryStorage()
+
+    dp = Dispatcher(events_isolation=SimpleEventIsolation(), storage=storage)
 
     user_repository = UserRepository()
     dose_repository = DoseRepository()
@@ -77,7 +87,7 @@ async def main():
     )
 
     # dp = Dispatcher(storage=storage)
-    dp = Dispatcher(events_isolation=SimpleEventIsolation())
+
 
     dp["services"] = services
     dp["user_service"] = user_service
