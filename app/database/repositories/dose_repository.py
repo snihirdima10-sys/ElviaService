@@ -2,6 +2,7 @@ import sqlite3
 
 from app.database.connection import  get_connection
 from app.models.dose import Dose
+from app.services.order_catalog import MEDICATION
 
 
 # noinspection PyMethodMayBeStatic
@@ -14,11 +15,11 @@ class DoseRepository:
                 connection.execute(
                     "INSERT INTO doses (medication, dose_value, price) VALUES (?, ?, ?) "
                     "ON CONFLICT(medication, dose_value) DO NOTHING",
-                    ("ELVIA", dose_value, int(dose_value * 1000)),
+                    (MEDICATION, dose_value, int(dose_value * 1000)),
                 )
                 row = connection.execute(
                     "SELECT * FROM doses WHERE medication = ? AND dose_value = ?",
-                    ("ELVIA", dose_value),
+                    (MEDICATION, dose_value),
                 ).fetchone()
                 return self._map_to_dose(row)
         finally:

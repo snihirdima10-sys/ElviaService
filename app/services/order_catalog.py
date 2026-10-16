@@ -1,6 +1,8 @@
 """Prices and starter offers shared by the menu and checkout."""
 from dataclasses import dataclass
 
+MEDICATION = "Mounjaro"
+
 
 @dataclass(frozen=True)
 class StarterOffer:

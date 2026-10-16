@@ -12,7 +12,7 @@ from config import DB_PATH
 from app.database.connection import get_connection
 from app.database.init_db import init_db
 
-MEDICATION = "Мунджаро"
+from app.services.order_catalog import MEDICATION
 DOSES = [(MEDICATION, half_mg / 2, half_mg * 500) for half_mg in range(2, 21)]
 
 
@@ -72,7 +72,7 @@ def main() -> None:
         print(f"Резервна копія: {backup_path}")
     init_db()
     seed_mounjaro()
-    print("Старі дозування видалено. Створено 19 нових дозувань Мунджаро, від 1 до 10 мг.")
+    print("Старі дозування видалено. Створено 19 нових дозувань Mounjaro, від 1 до 10 мг.")
     print("Ціна: 1 мг = 1 000 грн. Замовлення та призначення переприв’язано за кількістю мг.")
 
 

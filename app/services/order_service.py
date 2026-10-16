@@ -4,7 +4,7 @@ from app.database.repositories.dose_repository import DoseRepository
 from app.database.repositories.order_repository import OrderRepository
 from app.models.order import Order
 from app.models.dose import Dose
-from app.services.order_catalog import OFFERS
+from app.services.order_catalog import OFFERS, MEDICATION
 
 
 @dataclass(slots=True)
@@ -142,7 +142,7 @@ class OrderService:
     def quote(self, dose: Dose, weeks_count: int, offer_code: str | None = None) -> tuple[int, float]:
         if offer_code:
             offer = OFFERS.get(offer_code)
-            if (offer is None or dose.medication != "ELVIA"
+            if (offer is None or dose.medication != MEDICATION
                     or dose.dose_value != offer.dose_value or weeks_count != offer.quantity):
                 raise ValueError("Невірні параметри акційної пропозиції")
             # Starter offers have a fixed bundle price, not a period discount.
