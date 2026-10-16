@@ -8,6 +8,11 @@ class DoseService:
     def __init__(self, dose_repository: DoseRepository):
         self.dose = dose_repository
 
+    def get_catalog_dose(self, half_mg: int) -> Dose:
+        if not 2 <= half_mg <= 20:
+            raise ValueError("Невідоме дозування")
+        return self.dose.get_or_create_catalog_dose(half_mg / 2)
+
     def get_all_doses(self):
         return self.dose.get_all()
 

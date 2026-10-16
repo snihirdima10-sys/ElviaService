@@ -9,6 +9,25 @@ from app.models.order import Order, OrderStatus
 # noinspection PyRedeclaration
 # noinspection PyMethodMayBeStatic
 class OrderRepository:
+    def has_offer_order(self, user_id: int, offer_code: str) -> bool:
+        connection = get_connection()
+        try:
+            return connection.execute(
+                "SELECT 1 FROM orders WHERE user_id = ? AND offer_code = ? LIMIT 1",
+                (user_id, offer_code),
+            ).fetchone() is not None
+        finally:
+            connection.close()
+
+    def has_orders(self, user_id: int) -> bool:
+        connection = get_connection()
+        try:
+            return connection.execute(
+                "SELECT 1 FROM orders WHERE user_id = ? LIMIT 1", (user_id,)
+            ).fetchone() is not None
+        finally:
+            connection.close()
+
     def get_all_by_user_id(self, user_id: int) -> list[Order]:
         """Повертраэ список замовлень користувача"""
 
@@ -167,6 +186,7 @@ class OrderRepository:
                receipt_type: str | None = None,
                receipt_file_name: str | None = None,
                checkout_token: str | None = None,
+               offer_code: str | None = None,
     ) -> int:
         connection = get_connection()
         cursor = connection.cursor()
@@ -178,6 +198,10 @@ class OrderRepository:
                     if existing['user_id'] != user_id:
                         raise ValueError('Invalid checkout token')
                     return existing['id']
+            if offer_code == 'first' and cursor.execute(
+                'SELECT 1 FROM orders WHERE user_id = ? AND offer_code = ? LIMIT 1', (user_id, 'first')
+            ).fetchone():
+                raise ValueError('Первинне дозування доступне лише один раз.')
             cursor.execute("""
                 INSERT INTO orders (
                     user_id,
@@ -186,9 +210,9 @@ class OrderRepository:
                     discount,
                     total_price,
                     delivery_data,
-                    status, receipt_file_id, receipt_type, receipt_file_name, checkout_token
+                    status, receipt_file_id, receipt_type, receipt_file_name, checkout_token, offer_code
                 )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 user_id,
                 dose_id,
@@ -197,7 +221,7 @@ class OrderRepository:
                 total_price,
                 delivery_data,
                 status,
-                receipt_file_id, receipt_type, receipt_file_name, checkout_token,
+                receipt_file_id, receipt_type, receipt_file_name, checkout_token, offer_code,
 
             ))
 

@@ -1,6 +1,10 @@
+import logging
+from html import escape
 from datetime import datetime, timedelta
 
-from aiogram import F, Router
+from aiogram import F, Router, Bot
+from aiogram.exceptions import TelegramAPIError
+from config import DOCTOR_ID
 from aiogram.filters import StateFilter
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, \
     InlineKeyboardButton, CallbackQuery
@@ -13,6 +17,7 @@ from app.states.user.registration import RegistrationStates
 from app.database.repositories.user_repository import user_repository
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 def get_phone_share_keyboard():
@@ -206,7 +211,7 @@ async def process_phone(message: Message, state: FSMContext):
 
 
 @router.callback_query(RegistrationStates.confirm_registration, F.data == "confirm_registration")
-async def process_registration_confirmation(query: CallbackQuery, state: FSMContext):
+async def process_registration_confirmation(query: CallbackQuery, state: FSMContext, bot: Bot):
     if not isinstance(query.message, Message):
         return
 
@@ -241,6 +246,18 @@ async def process_registration_confirmation(query: CallbackQuery, state: FSMCont
         return
 
     await state.clear()
+
+    notification = (
+        "🌿 <b>Приєднався новий користувач</b>\n\n"
+        f"👤 ПІБ: <b>{escape(full_name)}</b>\n"
+        f"📱 Телефон: {escape(phone)}\n"
+        f"🆔 Telegram ID: <code>{tg_id}</code>"
+    )
+    for admin_id in DOCTOR_ID:
+        try:
+            await bot.send_message(chat_id=admin_id, text=notification, parse_mode="HTML")
+        except TelegramAPIError:
+            logger.exception("Could not notify administrator %s about registration of user %s", admin_id, tg_id)
 
     text = (
         "🌿 <b>Заповнення медичної анкети</b>\n\n"

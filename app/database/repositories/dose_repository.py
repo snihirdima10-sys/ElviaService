@@ -7,6 +7,23 @@ from app.models.dose import Dose
 # noinspection PyMethodMayBeStatic
 # noinspection PyRedeclaration
 class DoseRepository:
+    def get_or_create_catalog_dose(self, dose_value: float) -> Dose:
+        connection = get_connection()
+        try:
+            with connection:
+                connection.execute(
+                    "INSERT INTO doses (medication, dose_value, price) VALUES (?, ?, ?) "
+                    "ON CONFLICT(medication, dose_value) DO NOTHING",
+                    ("ELVIA", dose_value, int(dose_value * 1000)),
+                )
+                row = connection.execute(
+                    "SELECT * FROM doses WHERE medication = ? AND dose_value = ?",
+                    ("ELVIA", dose_value),
+                ).fetchone()
+                return self._map_to_dose(row)
+        finally:
+            connection.close()
+
     def deactivate(self, dose_id: int) -> bool:
         connection = get_connection()
         try:
@@ -59,14 +76,14 @@ class DoseRepository:
             connection.close()
 
 
-    def get_all(self):
+    def get_all(self) -> list[Dose] | None:
         connection = get_connection()
         cursor = connection.cursor()
         try:
             cursor.execute("SELECT * FROM doses WHERE is_active = 1 ORDER BY medication, dose_value, id")
 
             doses = cursor.fetchall()
-            return [dict(dose) for dose in doses] if doses else None
+            return [self._map_to_dose(dose) for dose in doses] if doses else None
 
         finally:
             connection.close()

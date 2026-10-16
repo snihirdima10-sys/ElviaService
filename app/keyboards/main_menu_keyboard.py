@@ -25,6 +25,6 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
             ],
             [KeyboardButton(text="👩‍⚕️ Зв’язатися з лікарем")],
                     ], resize_keyboard=True
-        , one_time_keyboard=False, is_persistent=True
+        , one_time_keyboard=True, is_persistent=True
     )
     return main_menu_keyboard

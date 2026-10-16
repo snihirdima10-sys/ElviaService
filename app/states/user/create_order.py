@@ -2,6 +2,7 @@ from aiogram.fsm.state import StatesGroup, State
 
 
 class CreateOrderState(StatesGroup):
+    browsing = State()
     wait_for_choose_period = State()
     wait_for_terms_confirmation = State()
     wait_for_city = State()

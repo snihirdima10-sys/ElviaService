@@ -175,7 +175,7 @@ def init_db() -> None:
             cursor.execute('ALTER TABLE users ADD COLUMN next_checkin_at DATE')
             cursor.execute("UPDATE users SET next_checkin_at = COALESCE(next_weight_request_at, date(created_at, '+7 days'))")
         order_columns = {row['name'] for row in cursor.execute('PRAGMA table_info(orders)')}
-        for name in ('receipt_file_id', 'receipt_type', 'receipt_file_name', 'checkout_token'):
+        for name in ('receipt_file_id', 'receipt_type', 'receipt_file_name', 'checkout_token', 'offer_code'):
             if name not in order_columns:
                 cursor.execute(f'ALTER TABLE orders ADD COLUMN {name} TEXT')
         cursor.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_checkout_token ON orders(checkout_token)')

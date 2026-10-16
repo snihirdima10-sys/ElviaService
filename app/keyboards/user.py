@@ -50,13 +50,13 @@ def build_select_period_keyboard(dose_price):
             ],
             [
                 InlineKeyboardButton(
-                    text=f"2 тиждень — {format_money(2 * dose_price * 0.9)} грн",
+                    text=f"2 тижні — {format_money(2 * dose_price * 0.9)} грн",
                     callback_data="period:2"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text=f"4 тиждень — {format_money(4 * dose_price * 0.8)} грн",
+                    text=f"4 тижні — {format_money(4 * dose_price * 0.8)} грн",
                     callback_data="period:4"
                 )
             ],
@@ -64,10 +64,10 @@ def build_select_period_keyboard(dose_price):
         ])
     return inline_keyboard
 
-def get_order_terms_keyboard() -> InlineKeyboardMarkup:
+def get_order_terms_keyboard(is_offer: bool = False) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Продовжити", callback_data="accept_order_terms")],
-        [InlineKeyboardButton(text="🔄 Змінити період", callback_data="change_period")],
+        [InlineKeyboardButton(text="🔄 Змінити пропозицію" if is_offer else "🔄 Змінити період", callback_data="change_period")],
         [InlineKeyboardButton(text="↩️ Скасувати", callback_data="cancel:order")],
     ])
 

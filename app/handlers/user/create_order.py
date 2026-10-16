@@ -3,6 +3,11 @@ import sqlite3
 from uuid import uuid4
 from html import escape
 
+from app.keyboards.BuildPriceKeyboard import (
+    OrderMenuCallback, build_order_menu, build_price_keyboard,
+    build_offers_keyboard, build_selection_keyboard,
+)
+from app.services.order_catalog import OFFERS, dose_label
 from config import PAYMENT_IBAN, PAYMENT_RECIPIENT, PAYMENT_PURPOSE, PAYMENT_TEST_MODE
 
 from aiogram import Router, F, Bot
@@ -29,12 +34,11 @@ async def show_order_details(message: Message, state: FSMContext, services: Serv
     if user is None:
         return
 
-    active_therapy = services.therapy.get_active_therapy_by_user_id(user.id)
-    if active_therapy is None:
-        return
-
-
     data = await state.get_data()
+    dose = services.dose.get_dose_by_dose_id(data["dose_id"])
+    if dose is None:
+        await message.answer("Дозування недоступне. Поверніться до меню через /start.")
+        return
     await state.set_state(CreateOrderState.wait_for_order_confirmation)
 
     order_preview = services.order.build_order_preview(
@@ -43,11 +47,12 @@ async def show_order_details(message: Message, state: FSMContext, services: Serv
         city=data["city"],
         delivery_method=data["delivery_method"],
         address=data["address"],
+        offer_code=data.get("offer_code"),
     )
 
     await message.answer(format_order_details(
         user=user,
-        active_therapy=active_therapy,
+        dose=dose,
         order_preview = order_preview
         ), reply_markup=get_show_order_details_keyboard())
 
@@ -56,62 +61,138 @@ router = Router()
 logger = logging.getLogger(__name__)
 
 
-@router.message(StateFilter(None), F.text == "🛒 Зробити замовлення")
-async def show_periods(message: Message, state: FSMContext, services: Services) -> None:
+ORDER_MENU_TEXT = "🛒 <b>Зробити замовлення</b>\n\nОберіть варіант замовлення:"
+
+
+def order_menu_keyboard(services: Services, user_id: int):
+    return build_order_menu(
+        services.therapy.get_active_therapy_by_user_id(user_id) is not None,
+    )
+
+
+@router.message(F.text == "🛒 Зробити замовлення")
+async def show_main_menu_order(message: Message, state: FSMContext, services: Services) -> None:
     if message.from_user is None:
         return
-    tg_id = message.from_user.id
-
-    user_id = services.user.get_user_id_by_tg_id(tg_id)
+    user_id = services.user.get_user_id_by_tg_id(message.from_user.id)
     if user_id is None:
+        await message.answer("Спочатку зареєструйтеся через /start.")
         return
+    await state.clear()
+    sent = await message.answer(ORDER_MENU_TEXT, reply_markup=order_menu_keyboard(services, user_id))
+    await state.set_state(CreateOrderState.browsing)
+    await state.update_data(user_id=user_id, menu_message_id=sent.message_id)
 
-    active_dose = services.therapy.get_active_therapy_by_user_id(user_id)
 
-    if active_dose is None:
-        await message.answer(
-            "🌿 <b>Потрібно уточнити призначення</b>\n\n"
-            "Наразі в системі немає актуального дозування для оформлення замовлення.\n\n"
-            "Будь ласка, зв’яжіться з лікарем — він допоможе уточнити вашу терапію та, за потреби, оновить призначення.\n\n"
-            "Після цього оформлення замовлення буде доступне 🤍",
-            parse_mode="HTML", reply_markup=get_main_menu_keyboard(),
+async def offer_is_available(query: CallbackQuery, state: FSMContext, services: Services, offer_code: str | None = None) -> bool:
+    user_id = services.user.get_user_id_by_tg_id(query.from_user.id)
+    if user_id is None:
+        await query.message.answer("Спочатку зареєструйтеся через /start.")
+        return False
+    if offer_code is None:
+        offer_code = (await state.get_data()).get("offer_code")
+    if not services.order.is_offer_available(user_id, offer_code):
+        await state.set_data(dict(user_id=user_id, menu_message_id=query.message.message_id))
+        await state.set_state(CreateOrderState.browsing)
+        await query.message.edit_text(
+            "Первинне дозування доступне лише один раз.\n\nОберіть інший варіант:",
+            reply_markup=order_menu_keyboard(services, user_id),
         )
+        return False
+    return True
+
+
+@router.callback_query(OrderMenuCallback.filter(), CreateOrderState.browsing)
+async def navigate_order_menu(query: CallbackQuery, callback_data: OrderMenuCallback,
+                              state: FSMContext, services: Services) -> None:
+    await query.answer()
+    if not isinstance(query.message, Message):
         return
+    data = await state.get_data()
+    user_id = services.user.get_user_id_by_tg_id(query.from_user.id)
+    if user_id is None or user_id != data.get("user_id") or query.message.message_id != data.get("menu_message_id"):
+        await query.message.answer("Ця кнопка більше неактивна. Надішліть /start для повернення до меню.")
+        return
+    action, value = callback_data.action, callback_data.value
+    if action in {"offer", "checkout_offer"}:
+        if not await offer_is_available(query, state, services, value):
+            return
+    if action == "menu":
+        await query.message.edit_text(ORDER_MENU_TEXT, reply_markup=order_menu_keyboard(services, user_id))
+    elif action == "doses":
+        await query.message.edit_text(
+            "💊 <b>Оберіть дозування</b>\n\nВартість одного дозування: 1 мг — 1 000 грн.",
+            reply_markup=build_price_keyboard())
+    elif action == "offers":
+        await query.message.edit_text("🎁 <b>Акційні пропозиції</b>\n\nОберіть пропозицію:",
+                                      reply_markup=build_offers_keyboard(services.order.is_offer_available(user_id, "first")))
+    elif action in {"offer", "checkout_offer"}:
+        offer = OFFERS.get(value)
+        if offer is None:
+            await query.message.answer("Невідома пропозиція. Поверніться через /start.")
+            return
+        if action == "offer":
+            await query.message.edit_text(
+                f"{offer.title}\n\nУ наборі: {offer.quantity} - {dose_label(offer.dose_value)} мл\n"
+                f"Звичайна ціна: {format_money(offer.regular_price)} грн\n"
+                f"Акційна ціна: <b>{format_money(offer.price)} грн</b>\n"
+                f"Економія: {format_money(offer.regular_price - offer.price)} грн",
+                reply_markup=build_selection_keyboard("offer", value))
+        else:
+            dose = services.dose.get_catalog_dose(int(offer.dose_value * 2))
+            await state.update_data(dose_id=dose.id, offer_code=value, weeks_count=offer.quantity)
+            await render_order_terms(query, state, services, offer.quantity)
+    elif action in {"dose", "checkout_dose", "current", "checkout_current"}:
+        if action in {"current", "checkout_current"}:
+            therapy = services.therapy.get_active_therapy_by_user_id(user_id)
+            if therapy is None:
+                await query.message.edit_text("Поточне призначення відсутнє. Оберіть дозування:",
+                                              reply_markup=build_price_keyboard())
+                return
+            dose = therapy.dose
+            kind = "current"
+        else:
+            try:
+                half_mg = int(value)
+                if not 2 <= half_mg <= 20:
+                    raise ValueError
+            except ValueError:
+                await query.message.answer("Невідоме дозування. Поверніться через /start.")
+                return
+            kind = "dose"
+            dose = None
+        dose_value = dose.dose_value if dose else half_mg / 2
+        if action in {"dose", "current"}:
+            await query.message.edit_text(
+                f"💊 Дозування: <b>{dose_label(dose_value)} мг</b>\n"
+                f"Вартість одного дозування: <b>{format_money(dose_value * 1000)} грн</b>",
+                reply_markup=build_selection_keyboard(kind, value))
+        else:
+            if dose is None:
+                dose = services.dose.get_catalog_dose(half_mg)
+            await state.update_data(dose_id=dose.id, offer_code=None)
+            await state.set_state(CreateOrderState.wait_for_choose_period)
+            await query.message.edit_text(
+                f"💊 {dose_label(dose_value)} мг\n\nОберіть тривалість терапії:",
+                reply_markup=build_select_period_keyboard(dose_value * 1000))
 
-    text = (
-        "🛒 <b>Оформлення замовлення</b>\n\n"
-        "Ваше поточне призначення:\n\n"
-        f"Препарат — <b>{active_dose.dose.medication}</b>\n"
-        f"Дозування — <b>{active_dose.dose.dose_value} мг</b> один раз на тиждень\n\n"
-        "<i>Оберіть бажану тривалість терапії, щоб перейти до оформлення замовлення</i> 🤍"
-    )
 
-    await state.update_data(
-        user_id=user_id,
-        dose_id=active_dose.dose.id
-    )
-    await state.set_state(CreateOrderState.wait_for_choose_period)
-    await message.answer(text, reply_markup=build_select_period_keyboard(active_dose.dose.price))
-
-
-@router.callback_query(F.data.startswith("period:"), CreateOrderState.wait_for_choose_period)
+@router.callback_query(F.data.in_({"period:1", "period:2", "period:4"}), CreateOrderState.wait_for_choose_period)
 async def show_order_terms(query: CallbackQuery, state: FSMContext, services: Services) -> None:
     await query.answer()
-    if query.data is None:
-        return
-    weeks_count = int(query.data.split(":")[1])
+    if isinstance(query.message, Message):
+        await render_order_terms(query, state, services, int(query.data.split(":")[1]))
 
+
+async def render_order_terms(query: CallbackQuery, state: FSMContext, services: Services, weeks_count: int) -> None:
     data = await state.get_data()
-
+    if data.get("offer_code") and not await offer_is_available(query, state, services):
+        return
     active_dose = services.dose.get_dose_by_dose_id(data["dose_id"])
     if active_dose is None:
+        await query.message.answer("Дозування недоступне. Поверніться через /start.")
         return
-
-    total_price = services.order.calculate_total_price(
-        price=active_dose.price,
-        weeks_count=weeks_count,
-        discount=services.order.calculate_discount(weeks_count)
-    )
+    _, total_price = services.order.quote(active_dose, weeks_count, data.get("offer_code"))
 
     text = (
         "📦 <b>Умови оформлення</b>\n\n"
@@ -135,7 +216,7 @@ async def show_order_terms(query: CallbackQuery, state: FSMContext, services: Se
         weeks_count=weeks_count,
     )
     await state.set_state(CreateOrderState.wait_for_terms_confirmation)
-    await query.message.edit_text(text, reply_markup=get_order_terms_keyboard(), parse_mode="HTML")
+    await query.message.edit_text(text, reply_markup=get_order_terms_keyboard(is_offer=bool(data.get("offer_code"))), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "accept_order_terms", CreateOrderState.wait_for_terms_confirmation)
@@ -248,13 +329,9 @@ async def show_payment_details(query: CallbackQuery, state: FSMContext, services
         return
 
 
-    price = active_dose.price
-    weeks_count = order_data["weeks_count"]
-    total_price = services.order.calculate_total_price(
-        price=price,
-        weeks_count=weeks_count,
-        discount=services.order.calculate_discount(weeks_count),
-    )
+    if order_data.get("offer_code") and not await offer_is_available(query, state, services):
+        return
+    _, total_price = services.order.quote(active_dose, order_data["weeks_count"], order_data.get("offer_code"))
 
     await state.update_data(total_price=total_price, checkout_token=uuid4().hex)
 
@@ -339,11 +416,15 @@ async def receive_payment_receipt(message: Message, state: FSMContext, services:
         receipt_type=receipt_type,
         receipt_file_name=file_name,
         checkout_token=data['checkout_token'],
+        offer_code=data.get('offer_code'),
     )
 
     try:
         order_id = services.order.create_order(order_data)
-    except (sqlite3.Error, ValueError):
+    except ValueError as exc:
+        await message.answer(str(exc) + ' Поверніться до меню через /start.')
+        return
+    except sqlite3.Error:
         logger.exception('Could not save order receipt for user %s', user_id)
         await message.answer('Не вдалося зберегти замовлення. Надішліть квитанцію ще раз.')
         return
@@ -385,10 +466,17 @@ async def change_period(query: CallbackQuery, state: FSMContext, services: Servi
         return
 
     data = await state.get_data()
-    active_therapy = services.therapy.get_active_therapy_by_user_id(data["user_id"])
-    if active_therapy is None:
+    if data.get("offer_code"):
+        if not await offer_is_available(query, state, services):
+            return
+        await state.set_state(CreateOrderState.browsing)
+        await state.set_data(dict(user_id=data["user_id"], menu_message_id=query.message.message_id))
+        await query.message.edit_text("🎁 Оберіть пропозицію:", reply_markup=build_offers_keyboard(services.order.is_offer_available(data["user_id"], "first")))
         return
-
+    dose = services.dose.get_dose_by_dose_id(data["dose_id"])
+    if dose is None:
+        await query.message.answer("Дозування недоступне. Поверніться через /start.")
+        return
     await state.set_state(CreateOrderState.wait_for_choose_period)
-    await query.message.edit_text("Оберіть період терапії, на який хочете оформити замовлення:", reply_markup=build_select_period_keyboard(
-        dose_price=active_therapy.dose.price,))
+    await query.message.edit_text("Оберіть тривалість терапії:",
+                                  reply_markup=build_select_period_keyboard(dose.dose_value * 1000))

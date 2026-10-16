@@ -2,6 +2,7 @@ from datetime import date
 from html import escape
 
 from app.models.order import Order
+from app.models.dose import Dose
 from app.models.therapy import Therapy
 from app.models.user import User
 from app.services.order_service import OrderPreview
@@ -172,15 +173,15 @@ def format_orders_text(orders: list[Order]) -> str:
 
     return orders_text
 
-def format_order_details(user: User, active_therapy: Therapy, order_preview: OrderPreview) -> str:
+def format_order_details(user: User, dose: Dose, order_preview: OrderPreview) -> str:
     text = (
         "📦 <b>Перевірте ваше замовлення</b>\n\n"
-        f"💉 Препарат: <b>{active_therapy.dose.medication}</b>\n"
-        f"Дозування: <b>{active_therapy.dose.dose_value} мг</b>\n"
+        f"💉 Препарат: <b>{escape(dose.medication)}</b>\n"
+        f"Дозування: <b>{dose.dose_value} мг</b>\n"
         f"Період: <b>{format_weeks(order_preview.weeks_count)}</b>\n"
         f"До сплати: <b>{format_money(order_preview.total_price)} грн</b>\n\n"
-        f"👤 Одержувач: <b>{user.full_name}</b>\n"
-        f"Телефон: <b>{user.phone}</b>\n\n"
+        f"👤 Одержувач: <b>{escape(user.full_name)}</b>\n"
+        f"Телефон: <b>{escape(user.phone)}</b>\n\n"
         f"🚚 <b>Доставка</b>\n{escape(order_preview.delivery_data)}\n\n"
         f"Будь ласка, перевірте вказані дані перед підтвердженням замовлення."
     )

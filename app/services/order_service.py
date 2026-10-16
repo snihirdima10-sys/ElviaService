@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from app.database.repositories.dose_repository import DoseRepository
 from app.database.repositories.order_repository import OrderRepository
 from app.models.order import Order
+from app.models.dose import Dose
+from app.services.order_catalog import OFFERS
 
 
 @dataclass(slots=True)
@@ -17,6 +19,7 @@ class OrderCreateData:
     receipt_type: str
     receipt_file_name: str | None
     checkout_token: str
+    offer_code: str | None = None
 
 
 @dataclass(slots=True)
@@ -68,13 +71,7 @@ class OrderService:
         if dose is None:
             raise ValueError("Dose not found")
 
-        discount = self.calculate_discount(data.weeks_count)
-
-        total_price = self.calculate_total_price(
-            price=dose.price,
-            weeks_count=data.weeks_count,
-            discount=discount
-        )
+        discount, total_price = self.quote(dose, data.weeks_count, data.offer_code)
 
         delivery_data = self.build_delivery_data(
             city=data.city,
@@ -94,6 +91,7 @@ class OrderService:
             receipt_type=data.receipt_type,
             receipt_file_name=data.receipt_file_name,
             checkout_token=data.checkout_token,
+            offer_code=data.offer_code,
         )
 
     def build_delivery_data(self, city: str, method: str, address: str) -> str:
@@ -120,19 +118,14 @@ class OrderService:
             city: str,
             delivery_method: str,
             address: str,
+            offer_code: str | None = None,
     ) -> OrderPreview:
         dose = self.dose_repository.get_by_id(dose_id)
 
         if dose is None:
             raise ValueError("Dose not found")
 
-        discount = self.calculate_discount(weeks_count)
-
-        total_price = self.calculate_total_price(
-            price=dose.price,
-            weeks_count=weeks_count,
-            discount=discount,
-        )
+        _, total_price = self.quote(dose, weeks_count, offer_code)
 
         delivery_data = self.build_delivery_data(
             city=city,
@@ -145,5 +138,24 @@ class OrderService:
             total_price=total_price,
             delivery_data=delivery_data,
         )
+
+    def quote(self, dose: Dose, weeks_count: int, offer_code: str | None = None) -> tuple[int, float]:
+        if offer_code:
+            offer = OFFERS.get(offer_code)
+            if (offer is None or dose.medication != "ELVIA"
+                    or dose.dose_value != offer.dose_value or weeks_count != offer.quantity):
+                raise ValueError("Невірні параметри акційної пропозиції")
+            # Starter offers have a fixed bundle price, not a period discount.
+            return 0, offer.price
+        discount = self.calculate_discount(weeks_count)
+        return discount, self.calculate_total_price(dose.dose_value * 1000, weeks_count, discount)
+
+    def is_offer_available(self, user_id: int, offer_code: str) -> bool:
+        return offer_code in OFFERS and (
+            offer_code != "first" or not self.order_repository.has_offer_order(user_id, "first")
+        )
+
+    def is_first_order(self, user_id: int) -> bool:
+        return not self.order_repository.has_orders(user_id)
 
 
