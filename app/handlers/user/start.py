@@ -7,6 +7,7 @@ from app.keyboards.main_menu_keyboard import get_main_menu_keyboard
 from app.keyboards.privacy_policy_keyboard import get_privacy_policy_keyboard
 from app.keyboards.welcome_keyboard import get_welcome_keyboard
 from app.texts.privacy_policy import PRIVACY_POLICY_TEXT
+from app.texts.therapy_prices import THERAPY_PRICES_TEXT
 from app.container import Services
 from app.handlers.user.progress import progress
 
@@ -53,6 +54,15 @@ async def show_privacy_policy(callback: CallbackQuery):
     if not isinstance(callback.message, Message):
         return
     await callback.message.edit_text(PRIVACY_POLICY_TEXT, reply_markup=get_privacy_policy_keyboard())
+
+
+@router.callback_query(F.data == "therapy_prices")
+async def show_therapy_prices(callback: CallbackQuery):
+    await callback.answer()
+    if not isinstance(callback.message, Message):
+        return
+    await callback.message.edit_text(
+        THERAPY_PRICES_TEXT, parse_mode="HTML", reply_markup=get_privacy_policy_keyboard())
 
 
 @router.callback_query(F.data == "back_to_welcome_message")
