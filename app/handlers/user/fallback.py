@@ -4,7 +4,6 @@ from aiogram.types import Message, CallbackQuery
 
 router = Router()
 RECOVERY_TEXT = "Поточний крок або кнопка більше неактивні. Надішліть /start, щоб повернутися до головного меню."
-git
 
 @router.message()
 async def unhandled_message(message: Message):
