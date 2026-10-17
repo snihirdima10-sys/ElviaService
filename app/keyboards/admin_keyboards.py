@@ -1,5 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from app.models.dose import Dose
+from app.services.order_catalog import dose_label
 
 
 def get_user_cart_keyboard() -> InlineKeyboardMarkup:
@@ -32,13 +34,13 @@ def get_therapy_history_keyboard():
     )
 
 
-def build_doses_keyboard(doses: list):
+def build_doses_keyboard(doses: list[Dose]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-
     for dose in doses:
-            builder.add(InlineKeyboardButton(text=f"{dose["medication"]} - {dose["dose_value"]}",
-                                             callback_data=f"dose_id:{dose["id"]}"))
-
+        builder.add(InlineKeyboardButton(
+            text=f"{dose.medication} - {dose_label(dose.dose_value)} мг",
+            callback_data=f"dose_id:{dose.id}",
+        ))
     builder.adjust(1)
     return builder.as_markup()
 

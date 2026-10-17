@@ -28,8 +28,9 @@ async def request_dose(query: CallbackQuery, state: FSMContext, services: Servic
     if not doses:
         await query.message.answer("Доступних дозувань немає.")
         return
+    keyboard = build_doses_keyboard(doses)
+    await query.message.edit_text("💉 Оберіть нове дозування:", reply_markup=keyboard)
     await state.set_state(AdminState.change_dose)
-    await query.message.edit_text("💉 Оберіть нове дозування:", reply_markup=build_doses_keyboard(doses))
 
 
 @router.callback_query(F.data.startswith("dose_id:"), AdminState.change_dose)

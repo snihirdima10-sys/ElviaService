@@ -25,8 +25,8 @@ async def show_doses(event: Message | CallbackQuery, state: FSMContext, services
     await state.set_state(DeleteDoseState.select)
     await state.update_data(dose_page=page)
     rows = [[InlineKeyboardButton(
-        text=f"{dose['medication']} · {dose['dose_value']:g} мг · {format_money(dose['price'])} грн",
-        callback_data=f"delete_dose:select:{dose['id']}",
+        text=f"{dose.medication} · {dose.dose_value:g} мг · {format_money(dose.price)} грн",
+        callback_data=f"delete_dose:select:{dose.id}",
     )] for dose in doses[page * PAGE_SIZE:(page + 1) * PAGE_SIZE]]
     navigation = []
     if page:
