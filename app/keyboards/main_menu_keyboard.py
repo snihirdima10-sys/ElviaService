@@ -23,7 +23,7 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
                 KeyboardButton(text="📋 Історія терапії"),
                 KeyboardButton(text="📦 Мої замовлення")
             ],
-            [KeyboardButton(text="👩‍⚕️ Зв’язатися з лікарем")],
+            [KeyboardButton(text="👩‍⚕️ Консультація з лікарем")],
                     ], resize_keyboard=True
         , one_time_keyboard=True, is_persistent=True
     )

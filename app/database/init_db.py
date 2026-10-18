@@ -34,6 +34,16 @@ def init_db() -> None:
             );
 
 
+            CREATE TABLE IF NOT EXISTS consultation_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                status TEXT NOT NULL DEFAULT 'payment'
+                    CHECK(status IN ('payment', 'pending', 'confirmed')),
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS one_open_consultation_per_user
+                ON consultation_requests(user_id) WHERE status IN ('payment', 'pending');
+
             CREATE TABLE IF NOT EXISTS doses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
 
